@@ -1,0 +1,35 @@
+LIBRARY dwmapi
+EXPORTS
+    DwmpDxGetWindowSharedSurface=dwmapi.DwmpDxGetWindowSharedSurface @100 NONAME
+    DwmpDxUpdateWindowSharedSurface=dwmapi.DwmpDxUpdateWindowSharedSurface @101 NONAME
+    DwmEnableBlurBehindWindow=dwmapi.DwmEnableBlurBehindWindow @102
+    DwmEnableComposition=dwmapi.DwmEnableComposition @103
+    DwmEnableMMCSS=dwmapi.DwmEnableMMCSS @104
+    DwmExtendFrameIntoClientArea=dwmapi.DwmExtendFrameIntoClientArea @105
+    DwmGetColorizationColor=dwmapi.DwmGetColorizationColor @106
+    DwmGetCompositionTimingInfo=dwmapi.DwmGetCompositionTimingInfo @107
+    DwmGetWindowAttribute=dwmapi.DwmGetWindowAttribute @108
+    DwmIsCompositionEnabled=dwmapi.DwmIsCompositionEnabled @109
+    DwmModifyPreviousDxFrameDuration=dwmapi.DwmModifyPreviousDxFrameDuration @110
+    DwmQueryThumbnailSourceSize=dwmapi.DwmQueryThumbnailSourceSize @111
+    DwmRegisterThumbnail=dwmapi.DwmRegisterThumbnail @112
+    DwmSetDxFrameDuration=dwmapi.DwmSetDxFrameDuration @113
+    DwmSetPresentParameters=dwmapi.DwmSetPresentParameters @114
+    DwmSetWindowAttribute=dwmapi.DwmSetWindowAttribute @115
+    DwmUnregisterThumbnail=dwmapi.DwmUnregisterThumbnail @116
+    DwmUpdateThumbnailProperties=dwmapi.DwmUpdateThumbnailProperties @117
+    DwmAttachMilContent=dwmapi.DwmAttachMilContent @118
+    DwmDetachMilContent=dwmapi.DwmDetachMilContent @119
+    DwmFlush=dwmapi.DwmFlush @120
+    DwmGetGraphicsStreamClient=dwmapi.DwmGetGraphicsStreamClient @121
+    DwmGetGraphicsStreamTransformHint=dwmapi.DwmGetGraphicsStreamTransformHint @122
+    DwmGetTransportAttributes=dwmapi.DwmGetTransportAttributes @123
+    DwmInvalidateIconicBitmaps=dwmapi.DwmInvalidateIconicBitmaps @124
+    DwmSetIconicLivePreviewBitmap=dwmapi.DwmSetIconicLivePreviewBitmap @125
+    DwmSetIconicThumbnail=dwmapi.DwmSetIconicThumbnail @126
+    DwmTransitionOwnedWindow=dwmapi.DwmTransitionOwnedWindow @127
+    DwmRenderGesture=dwmapi.DwmRenderGesture @128
+    DwmTetherContact=dwmapi.DwmTetherContact @129
+    DwmShowContact=dwmapi.DwmShowContact @130
+    DwmGetUnmetTabRequirements=dwmapi.DwmGetUnmetTabRequirements @131
+    DwmDefWindowProc=dwmapi.DwmDefWindowProc @132
