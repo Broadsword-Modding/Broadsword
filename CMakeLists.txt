@@ -25,6 +25,7 @@ find_package(glm CONFIG REQUIRED)
 find_package(toml11 CONFIG REQUIRED)
 
 # Broadsword Framework Library (main DLL)
+# Phase 1: Foundation Layer only
 add_library(Broadsword SHARED
     # Foundation - Injection
     Foundation/Injection/DllHijack.hpp
@@ -39,87 +40,16 @@ add_library(Broadsword SHARED
     Foundation/Memory/PatternScanner.hpp
     Foundation/Memory/MemoryUtils.hpp
 
-    # Foundation - Threading
-    Foundation/Threading/GameThreadExecutor.hpp
-    Foundation/Threading/GameThreadExecutor.cpp
+    # Foundation - Threading (Hook-based, single-threaded)
+    Foundation/Threading/GameFrameHook.hpp
+    Foundation/Threading/GameFrameHook.cpp
 
-    # Engine - UE5 Integration
-    Engine/UE5/WorldTracker.hpp
-    Engine/UE5/WorldTracker.cpp
-    Engine/UE5/ActorIterator.hpp
-    Engine/UE5/GameStateMonitor.hpp
-
-    # Engine - ProcessEvent Hook
-    Engine/ProcessEventHook.hpp
-    Engine/ProcessEventHook.cpp
-
-    # Engine - Events
-    Engine/Events/WorldEvents.hpp
-    Engine/Events/ActorEvents.hpp
-    Engine/Events/PlayerEvents.hpp
-
-    # Services - Event Bus
-    Services/EventBus/EventBus.hpp
-    Services/EventBus/EventBus.cpp
-    Services/EventBus/EventTypes.hpp
-
-    # Services - Logging
-    Services/Logging/LogEntry.hpp
-    Services/Logging/StructuredLogger.hpp
-    Services/Logging/StructuredLogger.cpp
-    Services/Logging/LogSinks.hpp
-
-    # Services - Config
-    Services/Config/UniversalConfig.hpp
-    Services/Config/UniversalConfig.cpp
-    Services/Config/TypeRegistry.hpp
-    Services/Config/Reflection.hpp
-
-    # Services - Input
-    Services/Input/InputManager.hpp
-    Services/Input/InputManager.cpp
-    Services/Input/KeyBinding.hpp
-
-    # Services - UI
-    Services/UI/Theme.hpp
-    Services/UI/Theme.cpp
-    Services/UI/ThemeManager.hpp
-    Services/UI/ThemeManager.cpp
-    Services/UI/UIContext.hpp
-    Services/UI/UIContext.cpp
-    Services/UI/BindingManager.hpp
-    Services/UI/BindingManager.cpp
-
-    # Framework - Core
-    Framework/Core/Framework.hpp
-    Framework/Core/Framework.cpp
-    Framework/Core/ModLoader.hpp
-    Framework/Core/ModLoader.cpp
-    Framework/Core/ModContext.hpp
-    Framework/Core/FrameContext.hpp
-
-    # Framework - Graphics
-    Framework/Graphics/Renderer.hpp
-    Framework/Graphics/Renderer.cpp
-    Framework/Graphics/ImGuiBackend.hpp
-    Framework/Graphics/ImGuiBackend.cpp
-
-    # Framework - World
-    Framework/World/WorldFacade.hpp
-    Framework/World/WorldFacade.cpp
-    Framework/World/ActorSpawner.hpp
-    Framework/World/QueryEngine.hpp
-
-    # Mod API - Public Interface
+    # Mod API - Public Interface (Phase 1 stubs)
     ModAPI/Broadsword.hpp
     ModAPI/Mod.hpp
     ModAPI/Frame.hpp
-    ModAPI/World.hpp
-    ModAPI/UI.hpp
-    ModAPI/Input.hpp
-    ModAPI/Hooks.hpp
-    ModAPI/Utils.hpp
-    ModAPI/Result.hpp
+
+    # Note: Engine, Services, and Framework layers will be added in Phase 2+
 )
 
 target_include_directories(Broadsword

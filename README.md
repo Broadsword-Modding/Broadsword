@@ -54,24 +54,34 @@ cmake --build build --config Release
 #include <Broadsword.hpp>
 
 class MyMod : public Broadsword::Mod {
-  [[configurable]] bool m_Enabled = true;
+  [[configurable]] bool m_GodMode = false;
   [[configurable]] float m_Speed = 1.0f;
 
-  void OnRegister(Broadsword::ModContext& ctx) override {
-    ctx.events.Subscribe<Broadsword::OnFrame>([this](auto& frame) {
-      if (!m_Enabled) return;
-
-      // Your mod logic here
-      if (frame.input.IsKeyPressed(VK_F1)) {
-        frame.log.Info("F1 pressed!");
-      }
-    });
+  ModInfo GetInfo() const override {
+    return {"My Mod", "1.0.0", "Author", "Description"};
   }
 
-  void OnFrame(Broadsword::Frame& frame) override {
-    // Runs every frame on game thread
-    if (frame.ui.Button("My Button", VK_F2)) {  // Auto-bindable!
-      frame.log.Info("Button clicked or F2 pressed!");
+  void OnFrame(Frame& frame) override {
+    // Game logic and UI in one callback
+    // Runs on game thread with UE5 SDK access
+
+    // Input handling
+    if (frame.input.IsKeyPressed(VK_F1)) {
+      auto* player = frame.world.GetPlayer();
+      player->Health = 100.0f;
+    }
+
+    // UI rendering
+    if (frame.ui.Button("Toggle God Mode")) {
+      m_GodMode = !m_GodMode;
+    }
+
+    // Game logic
+    if (m_GodMode) {
+      auto* player = frame.world.GetPlayer();
+      if (player) {
+        player->Health = 100.0f;
+      }
     }
   }
 };
@@ -94,7 +104,28 @@ Config is automatically saved to `Broadsword.config.json`:
 
 ## Architecture
 
-Broadsword uses a 5-layer architecture:
+### Execution Model
+
+Broadsword hooks into the game's viewport drawing to synchronize with the actual frame:
+
+```
+Game Thread:
+  ├─ Game Tick
+  ├─ UGameViewportClient::Draw ← Hooked via VMT (SDK)
+  │   ├─ Game renders world
+  │   ├─ Broadsword::OnFrame()
+  │   │   └─ Mod::OnFrame() ← Single callback - game logic + UI
+  │   └─ ImGui::Render()
+  └─ Present
+```
+
+**Thread Safety:**
+- All mod code runs on the game thread
+- UE5 SDK calls are safe (correct thread context)
+- No queuing or synchronization needed
+- Automatically adapts to game's actual FPS
+
+### 5-Layer Architecture
 
 ```
 ModAPI         <- Mods interact here (clean, stable API)
