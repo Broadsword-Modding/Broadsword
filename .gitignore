@@ -1,0 +1,93 @@
+# Build directories
+build/
+out/
+bin/
+lib/
+*.dir/
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CTestTestfile.cmake
+install_manifest.txt
+
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.vcxproj.filters
+*.vcxproj.user
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# Build artifacts
+*.dll
+*.exe
+*.pdb
+*.ilk
+*.obj
+*.iobj
+*.ipdb
+*.lib
+*.exp
+*.log
+
+# Logs
+*.log
+Broadsword_*.log
+
+# Config (may contain user-specific settings)
+# Uncomment if you want to ignore config files
+# Broadsword.config.json
+
+# vcpkg
+vcpkg_installed/
+.vcpkg-root
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+*.swp
+*.swo
+*~
+
+# Testing
+Testing/
+tests/output/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.cache
+
+# Documentation build
+Docs/html/
+Docs/latex/
+Docs/xml/
+
+# Profiling
+*.psess
+*.vsp
+*.vspx
+*.sap
+
+# ReSharper
+_ReSharper*/
+*.DotSettings.user
+
+# JetBrains Rider
+.idea/
+*.sln.iml
+
+# Local environment
+.env
+.env.local
