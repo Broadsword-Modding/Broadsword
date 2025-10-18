@@ -6,6 +6,7 @@
 #include <fstream>
 #include <memory>
 #include <string>
+#include <cstdio>
 
 #include "../../Foundation/Hooks/VTableHook.hpp"
 #include "../../Foundation/Threading/GameThreadExecutor.hpp"
@@ -26,11 +27,17 @@ static std::ofstream g_LogFile;
 
 static void Log(const std::string& message)
 {
+    // Write to file
     if (g_LogFile.is_open())
     {
         g_LogFile << message << std::endl;
         g_LogFile.flush();
     }
+
+#ifdef _DEBUG
+    // Write to console
+    printf("[Broadsword] %s\n", message.c_str());
+#endif
 }
 
 // Forward declare Win32 message handler
@@ -150,6 +157,19 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
     case DLL_PROCESS_ATTACH:
     {
         DisableThreadLibraryCalls(hModule);
+
+#ifdef _DEBUG
+        // Allocate console for debug output (stays open for entire session)
+        AllocConsole();
+        FILE* fDummy;
+        freopen_s(&fDummy, "CONOUT$", "w", stdout);
+        freopen_s(&fDummy, "CONOUT$", "w", stderr);
+        SetConsoleTitleA("Broadsword Framework - Debug Console");
+
+        printf("========================================\n");
+        printf("Broadsword Framework - Phase 1\n");
+        printf("========================================\n\n");
+#endif
 
         // Open log file
         g_LogFile.open("Broadsword_Phase1.log", std::ios::out | std::ios::trunc);
