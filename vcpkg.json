@@ -1,0 +1,19 @@
+{
+  "name": "broadsword",
+  "version": "2.0.0",
+  "description": "Next-generation modding framework for Half Sword (UE5)",
+  "dependencies": [
+    {
+      "name": "imgui",
+      "features": [
+        "dx11-binding",
+        "dx12-binding",
+        "win32-binding"
+      ]
+    },
+    "minhook",
+    "nlohmann-json",
+    "glm",
+    "toml11"
+  ]
+}
