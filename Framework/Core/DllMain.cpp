@@ -21,6 +21,7 @@ static bool g_ShuttingDown = false;
 static HWND g_Window = nullptr;
 
 // Logging (temporary for Phase 1)
+// TODO: Replace with proper logging system in Phase 2
 static std::ofstream g_LogFile;
 
 static void Log(const std::string& message)
