@@ -8,9 +8,9 @@
 
 ## Progress Overview
 
-- **Completed:** 4 / 25
-- **In Progress:** Checkpoint 5
-- **Current Phase:** Event System
+- **Completed:** 5 / 25
+- **In Progress:** Checkpoint 6
+- **Current Phase:** World Operations
 
 ---
 
@@ -44,9 +44,11 @@
   - Completed: 2025-01-19
   - Build: Verified Debug build succeeds
 
-- [ ] **Checkpoint 5: ModLoader**
-  - Files: `Framework/Core/ModLoader.hpp`, `Framework/Core/ModLoader.cpp`
+- [x] **Checkpoint 5: ModLoader**
+  - Files: `Framework/Core/ModLoader.hpp`, `Framework/Core/ModLoader.cpp`, `CMakeLists.txt`
   - Commit: "feat: add ModLoader with DLL discovery and lifecycle"
+  - Completed: 2025-01-19
+  - Build: Verified Debug build succeeds
 
 ### Phase 3: World Operations
 
@@ -750,4 +752,4 @@ class QueryEngine {
 ---
 
 **Last Updated:** 2025-01-19
-**Current Checkpoint:** 5 of 25
+**Current Checkpoint:** 6 of 25

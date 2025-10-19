@@ -38,6 +38,7 @@ file(GLOB_RECURSE SDK_SOURCES "Engine/SDK/SDK/*_functions.cpp")
 add_library(Broadsword SHARED
     # Framework Core
     Framework/Core/DllMain.cpp
+    Framework/Core/ModLoader.cpp
 
     # Foundation - Injection
     Foundation/Injection/DllHijack.cpp
