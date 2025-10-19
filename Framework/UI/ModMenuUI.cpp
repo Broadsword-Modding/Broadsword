@@ -18,8 +18,12 @@ void ModMenuUI::Render()
 
     const auto& theme = Services::UIContext::Get().GetTheme().GetColors();
 
-    // Set size constraints: min/max width, unlimited height
-    ImGui::SetNextWindowSizeConstraints(ImVec2(300, -1), ImVec2(500, FLT_MAX));
+    // Set size constraints: width 300-500px, height unlimited
+    // ImGui format: SetNextWindowSizeConstraints(min_size, max_size)
+    ImGui::SetNextWindowSizeConstraints(
+        ImVec2(300, 100),      // Min: 300px wide, 100px tall
+        ImVec2(500, FLT_MAX)   // Max: 500px wide, unlimited height
+    );
     ImGui::SetNextWindowSize(ImVec2(400, 700), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
 
@@ -177,7 +181,19 @@ void ModMenuUI::Render()
 
     if (modUIElements.empty())
     {
-        ImGui::TextDisabled("No mods loaded");
+        // Center the "No mods loaded :(" text vertically and horizontally
+        const char* emptyText = "No mods loaded :(";
+        ImVec2 textSize = ImGui::CalcTextSize(emptyText);
+        ImVec2 availSize = ImGui::GetContentRegionAvail();
+
+        // Calculate centered position
+        float textX = (availSize.x - textSize.x) / 2.0f;
+        float textY = (availSize.y - textSize.y) / 2.0f;
+
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + textX);
+        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + textY);
+
+        ImGui::TextDisabled("%s", emptyText);
     }
     else
     {
