@@ -56,10 +56,6 @@ static bool LoadBroadswordFramework()
     printf("[Proxy] Make sure Broadsword.dll is in the same folder as the game executable\n");
 #endif
 
-    MessageBoxA(nullptr, "Could not find 'Broadsword.dll'.\n\n"
-                         "Please make sure the file is in the same folder as the game executable.",
-                "Broadsword Framework", MB_OK | MB_ICONERROR);
-
     return false;
 }
 
@@ -77,9 +73,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
         freopen_s(&fDummy, "CONOUT$", "w", stderr);
         SetConsoleTitleA("Broadsword Proxy - Debug Console");
 
-        printf("========================================\n");
-        printf("Broadsword Proxy - Loading...\n");
-        printf("========================================\n\n");
+        printf("Broadsword Proxy\n\n");
 #endif
 
         // Load the real dwmapi.dll from System32
@@ -88,12 +82,8 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
         if (!g_OriginalDwmapi)
         {
 #ifdef _DEBUG
-            printf("\n[Proxy] CRITICAL ERROR: Failed to load original dwmapi.dll\n");
-            printf("See MessageBox for details.\n");
-            // Don't close console - let user see the error
+            printf("[Proxy] CRITICAL ERROR: Failed to load original dwmapi.dll\n");
 #endif
-            MessageBoxA(nullptr, "Failed to load original dwmapi.dll from System32.", "Broadsword Framework",
-                        MB_OK | MB_ICONERROR);
             return FALSE;
         }
 
@@ -101,22 +91,14 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
         bool frameworkLoaded = LoadBroadswordFramework();
 
 #ifdef _DEBUG
-        printf("\n========================================\n");
         if (frameworkLoaded)
         {
-            printf("Proxy initialization complete!\n");
-            printf("Broadsword.dll has been loaded.\n");
+            printf("[Proxy] Broadsword.dll loaded successfully\n");
         }
         else
         {
-            printf("Proxy loaded, but Broadsword.dll failed to load.\n");
+            printf("[Proxy] Failed to load Broadsword.dll\n");
         }
-        printf("========================================\n\n");
-        printf("This console will auto-close when you exit the game.\n");
-        printf("You can also close it manually (X button).\n\n");
-
-        // Don't call getchar() - it blocks the game!
-        // Don't close console - let it stay open for debugging
 #endif
         break;
     }

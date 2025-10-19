@@ -7,6 +7,8 @@
 #include <memory>
 #include <string>
 #include <cstdio>
+#include <chrono>
+#include <ctime>
 
 #include "../../Foundation/Hooks/VTableHook.hpp"
 #include "../../Foundation/Threading/GameThreadExecutor.hpp"
@@ -21,8 +23,7 @@ static bool g_Initialized = false;
 static bool g_ShuttingDown = false;
 static HWND g_Window = nullptr;
 
-// Logging (temporary for Phase 1)
-// TODO: Replace with proper logging system in Phase 2
+// Logging
 static std::ofstream g_LogFile;
 
 static void Log(const std::string& message)
@@ -82,7 +83,7 @@ static HRESULT __stdcall hkPresent(IDXGISwapChain* pSwapChain, UINT syncInterval
         ImGui_ImplWin32_Init(g_Window);
         Log("ImGui Win32 backend initialized");
 
-        // Initialize DX11 render backend (Phase 1: DX11 only)
+        // Initialize DX11 render backend
         Log("Creating DX11 render backend...");
         g_RenderBackend = CreateRenderBackend(RenderBackend::API::DX11);
 
@@ -118,15 +119,13 @@ static HRESULT __stdcall hkPresent(IDXGISwapChain* pSwapChain, UINT syncInterval
         g_RenderBackend->NewFrame();
         ImGui::NewFrame();
 
-        // Render test window for Phase 1
+        // Render test window
         {
-            ImGui::Begin("Broadsword Framework - Phase 1");
+            ImGui::Begin("Broadsword Framework");
             ImGui::Text("Framework is running!");
             ImGui::Text("Backend: DirectX 11");
             ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
             ImGui::Text("Queued Actions: %zu", GameThreadExecutor::Get().PendingCount());
-            ImGui::Separator();
-            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Phase 1 Complete!");
             ImGui::End();
         }
 
@@ -191,10 +190,6 @@ DWORD WINAPI BroadswordThread(LPVOID lpParam)
         Log("CRITICAL ERROR: kiero failed to initialize after " + std::to_string(attempt) + " attempts (" +
             std::to_string(TIMEOUT_MS / 1000) + " seconds)");
         Log("DirectX may not be D3D11, or game is using incompatible graphics API");
-        MessageBoxA(nullptr, "Broadsword Framework failed to hook DirectX.\n\n"
-                             "The game may be using D3D12 or Vulkan.\n"
-                             "Check Broadsword_Phase1.log for details.",
-                    "Broadsword Framework - Initialization Failed", MB_OK | MB_ICONERROR);
         return 1;
     }
 
@@ -239,14 +234,23 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
         freopen_s(&fDummy, "CONOUT$", "w", stderr);
         SetConsoleTitleA("Broadsword Framework - Debug Console");
 
-        printf("========================================\n");
-        printf("Broadsword Framework - Phase 1\n");
-        printf("========================================\n\n");
+        printf("Broadsword Framework\n\n");
 #endif
 
-        // Open log file immediately
-        g_LogFile.open("Broadsword_Phase1.log", std::ios::out | std::ios::trunc);
-        Log("Broadsword Framework - Phase 1");
+        // Open log file with timestamp
+        auto now = std::chrono::system_clock::now();
+        auto time = std::chrono::system_clock::to_time_t(now);
+        std::tm localTime;
+        localtime_s(&localTime, &time);
+
+        char logFilename[512];
+        sprintf_s(logFilename, "Broadsword_%04d%02d%02d_%02d%02d%02d.log",
+                  localTime.tm_year + 1900, localTime.tm_mon + 1,
+                  localTime.tm_mday, localTime.tm_hour, localTime.tm_min,
+                  localTime.tm_sec);
+
+        g_LogFile.open(logFilename, std::ios::out | std::ios::trunc);
+        Log("Broadsword Framework");
         Log("DLL_PROCESS_ATTACH - Broadsword.dll loaded");
 
         // Create initialization thread (don't block DLL_PROCESS_ATTACH)

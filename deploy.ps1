@@ -202,8 +202,8 @@ Write-Host ""
 Write-Host "You can now launch Half Sword to test Broadsword Framework." -ForegroundColor White
 Write-Host ""
 Write-Host "Expected log file:" -ForegroundColor Gray
-Write-Host "  $GamePath\Broadsword_Phase1.log" -ForegroundColor DarkGray
+Write-Host "  $GamePath\Broadsword_YYYYMMDD_HHMMSS.log" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "Expected ImGui window:" -ForegroundColor Gray
-Write-Host "  Broadsword Framework - Phase 1" -ForegroundColor DarkGray
+Write-Host "  Broadsword Framework" -ForegroundColor DarkGray
 Write-Host ""
