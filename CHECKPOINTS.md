@@ -8,8 +8,8 @@
 
 ## Progress Overview
 
-- **Completed:** 7 / 25
-- **In Progress:** Checkpoint 8
+- **Completed:** 8 / 25
+- **In Progress:** Checkpoint 9
 - **Current Phase:** Universal Keybinding
 
 ---
@@ -66,9 +66,11 @@
   - Completed: 2025-01-19
   - Build: Verified Debug build succeeds
 
-- [ ] **Checkpoint 8: Universal Keybinding - Part 2 (UI Integration)**
+- [x] **Checkpoint 8: Universal Keybinding - Part 2 (UI Integration)**
   - Files: `Services/UI/UIContext.hpp`, `Services/UI/UIContext.cpp`
   - Commit: "feat: add universal keybinding to UIContext::Button()"
+  - Completed: 2025-01-19
+  - Build: Verified Debug build succeeds
 
 - [ ] **Checkpoint 9: Universal Keybinding - Part 3 (More Widgets)**
   - Files: `Services/UI/UIContext.cpp`
@@ -756,4 +758,4 @@ class QueryEngine {
 ---
 
 **Last Updated:** 2025-01-19
-**Current Checkpoint:** 8 of 25
+**Current Checkpoint:** 9 of 25
