@@ -70,6 +70,9 @@ add_library(Broadsword SHARED
     Framework/UI/NotificationManager.cpp
     Framework/UI/ModMenuUI.cpp
 
+    # Framework - World
+    Framework/World/WorldFacade.cpp
+
     # Engine - SDK
     Engine/SDK/SDKPch.cpp
     Engine/SDK/SDK/Basic.cpp
