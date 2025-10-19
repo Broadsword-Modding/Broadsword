@@ -50,6 +50,15 @@ add_library(Broadsword SHARED
     Framework/Graphics/RenderBackend.cpp
     Framework/Graphics/DX11Backend.cpp
     # Framework/Graphics/DX12Backend.cpp  # TODO: Add in Phase 2
+
+    # Services - UI
+    Services/UI/Theme.cpp
+    Services/UI/UIContext.cpp
+
+    # Framework - UI
+    Framework/UI/ConsoleWindow.cpp
+    Framework/UI/NotificationManager.cpp
+    Framework/UI/ModMenuUI.cpp
 )
 
 target_include_directories(Broadsword

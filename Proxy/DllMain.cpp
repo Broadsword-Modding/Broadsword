@@ -13,50 +13,15 @@ static HMODULE LoadOriginalDwmapi()
     char dwmapiPath[MAX_PATH];
     wsprintfA(dwmapiPath, "%s\\dwmapi.dll", systemPath);
 
-#ifdef _DEBUG
-    printf("[Proxy] Loading real dwmapi.dll from System32...\n");
-    printf("[Proxy] Path: %s\n", dwmapiPath);
-#endif
-
     HMODULE hDll = LoadLibraryA(dwmapiPath);
-
-#ifdef _DEBUG
-    if (hDll)
-    {
-        printf("[Proxy] Successfully loaded real dwmapi.dll\n");
-    }
-    else
-    {
-        printf("[Proxy] ERROR: Failed to load real dwmapi.dll (Error: %lu)\n", GetLastError());
-    }
-#endif
-
     return hDll;
 }
 
 // Load Broadsword.dll (the actual framework)
 static bool LoadBroadswordFramework()
 {
-#ifdef _DEBUG
-    printf("[Proxy] Loading Broadsword.dll...\n");
-#endif
-
     HMODULE hBroadsword = LoadLibraryA("Broadsword.dll");
-
-    if (hBroadsword)
-    {
-#ifdef _DEBUG
-        printf("[Proxy] Successfully loaded Broadsword.dll\n");
-#endif
-        return true;
-    }
-
-#ifdef _DEBUG
-    printf("[Proxy] ERROR: Failed to load Broadsword.dll (Error: %lu)\n", GetLastError());
-    printf("[Proxy] Make sure Broadsword.dll is in the same folder as the game executable\n");
-#endif
-
-    return false;
+    return hBroadsword != nullptr;
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved)
@@ -65,41 +30,16 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
     {
     case DLL_PROCESS_ATTACH:
     {
-#ifdef _DEBUG
-        // Allocate console for debug output
-        AllocConsole();
-        FILE* fDummy;
-        freopen_s(&fDummy, "CONOUT$", "w", stdout);
-        freopen_s(&fDummy, "CONOUT$", "w", stderr);
-        SetConsoleTitleA("Broadsword Proxy - Debug Console");
-
-        printf("Broadsword Proxy\n\n");
-#endif
-
         // Load the real dwmapi.dll from System32
         g_OriginalDwmapi = LoadOriginalDwmapi();
 
         if (!g_OriginalDwmapi)
         {
-#ifdef _DEBUG
-            printf("[Proxy] CRITICAL ERROR: Failed to load original dwmapi.dll\n");
-#endif
             return FALSE;
         }
 
         // Load the Broadsword framework
-        bool frameworkLoaded = LoadBroadswordFramework();
-
-#ifdef _DEBUG
-        if (frameworkLoaded)
-        {
-            printf("[Proxy] Broadsword.dll loaded successfully\n");
-        }
-        else
-        {
-            printf("[Proxy] Failed to load Broadsword.dll\n");
-        }
-#endif
+        LoadBroadswordFramework();
         break;
     }
 

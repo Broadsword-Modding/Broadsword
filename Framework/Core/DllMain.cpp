@@ -13,12 +13,21 @@
 #include "../../Foundation/Hooks/VTableHook.hpp"
 #include "../../Foundation/Threading/GameThreadExecutor.hpp"
 #include "../Graphics/RenderBackend.hpp"
+#include "../../Services/UI/UIContext.hpp"
+#include "../UI/ConsoleWindow.hpp"
+#include "../UI/NotificationManager.hpp"
+#include "../UI/ModMenuUI.hpp"
+#include <nlohmann/json.hpp>
 
 using namespace Broadsword;
 using namespace Broadsword::Foundation;
+using namespace Broadsword::Services;
+using namespace Broadsword::Framework;
 
 // Global state
 static std::unique_ptr<RenderBackend> g_RenderBackend = nullptr;
+static std::unique_ptr<ConsoleWindow> g_ConsoleWindow = nullptr;
+static std::unique_ptr<ModMenuUI> g_ModMenuUI = nullptr;
 static bool g_Initialized = false;
 static bool g_ShuttingDown = false;
 static HWND g_Window = nullptr;
@@ -35,14 +44,44 @@ static void Log(const std::string& message)
         g_LogFile.flush();
     }
 
-#ifdef _DEBUG
-    // Write to console
-    printf("[Broadsword] %s\n", message.c_str());
-#endif
+    // Also add to in-game console if initialized
+    if (g_ConsoleWindow)
+    {
+        g_ConsoleWindow->AddMessage(LogLevel::Info, message);
+    }
 }
 
 // Forward declare Win32 message handler
 extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+// Original WndProc
+static WNDPROC oWndProc = nullptr;
+
+// Custom WndProc to handle input
+static LRESULT CALLBACK hkWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    // Handle INSERT key to toggle UI visibility
+    if (msg == WM_KEYDOWN && wParam == VK_INSERT)
+    {
+        if (g_ModMenuUI)
+        {
+            g_ModMenuUI->ToggleVisible();
+        }
+        return 0;
+    }
+
+    // Let ImGui handle input when UI is visible
+    if (g_ModMenuUI && g_ModMenuUI->IsVisible())
+    {
+        if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
+        {
+            return true;
+        }
+    }
+
+    // Pass to original WndProc
+    return CallWindowProcA(oWndProc, hWnd, msg, wParam, lParam);
+}
 
 // Original Present function pointer
 typedef HRESULT(__stdcall* PresentFn)(IDXGISwapChain*, UINT, UINT);
@@ -83,6 +122,17 @@ static HRESULT __stdcall hkPresent(IDXGISwapChain* pSwapChain, UINT syncInterval
         ImGui_ImplWin32_Init(g_Window);
         Log("ImGui Win32 backend initialized");
 
+        // Hook WndProc for input handling
+        oWndProc = (WNDPROC)SetWindowLongPtrA(g_Window, GWLP_WNDPROC, (LONG_PTR)hkWndProc);
+        if (oWndProc)
+        {
+            Log("WndProc hooked successfully");
+        }
+        else
+        {
+            Log("Failed to hook WndProc!");
+        }
+
         // Initialize DX11 render backend
         Log("Creating DX11 render backend...");
         g_RenderBackend = CreateRenderBackend(RenderBackend::API::DX11);
@@ -90,6 +140,65 @@ static HRESULT __stdcall hkPresent(IDXGISwapChain* pSwapChain, UINT syncInterval
         if (g_RenderBackend && g_RenderBackend->InitializeImGui(pSwapChain))
         {
             Log("DX11 backend initialized successfully");
+
+            // Initialize UI system
+            Log("Initializing UI system...");
+            UIContext::Get().Initialize();
+
+            // Load config file if it exists
+            const char* configPath = "Broadsword.json";
+            std::ifstream configFile(configPath);
+            if (configFile.is_open())
+            {
+                try
+                {
+                    nlohmann::json config;
+                    configFile >> config;
+                    configFile.close();
+
+                    UIContext::Get().GetTheme().LoadFromConfig(config);
+                    Log("Loaded config from Broadsword.json");
+                }
+                catch (const std::exception& e)
+                {
+                    Log(std::string("Failed to parse config: ") + e.what());
+                }
+            }
+            else
+            {
+                Log("No config file found, using defaults");
+            }
+
+            // Apply theme to ImGui
+            UIContext::Get().GetTheme().ApplyToImGui();
+            Log("Theme applied to ImGui");
+
+            // Create UI windows
+            g_ConsoleWindow = std::make_unique<ConsoleWindow>();
+            g_ModMenuUI = std::make_unique<ModMenuUI>();
+            g_ModMenuUI->SetConsoleWindow(g_ConsoleWindow.get());
+
+            // Load console config after creation
+            std::ifstream consoleConfigFile(configPath);
+            if (consoleConfigFile.is_open())
+            {
+                try
+                {
+                    nlohmann::json config;
+                    consoleConfigFile >> config;
+                    consoleConfigFile.close();
+
+                    g_ConsoleWindow->LoadFromConfig(config);
+                    Log("Loaded console settings from config");
+                }
+                catch (const std::exception& e)
+                {
+                    Log(std::string("Failed to load console config: ") + e.what());
+                }
+            }
+
+            Log("UI windows created");
+
             g_Initialized = true;
         }
         else
@@ -102,6 +211,9 @@ static HRESULT __stdcall hkPresent(IDXGISwapChain* pSwapChain, UINT syncInterval
         if (g_Initialized)
         {
             Log("Broadsword Framework initialized successfully!");
+
+            // Show welcome notification
+            NotificationManager::Get().Success("Broadsword Framework", "Framework initialized successfully!");
         }
         else
         {
@@ -119,15 +231,22 @@ static HRESULT __stdcall hkPresent(IDXGISwapChain* pSwapChain, UINT syncInterval
         g_RenderBackend->NewFrame();
         ImGui::NewFrame();
 
-        // Render test window
+        // Render UI windows
+        if (g_ModMenuUI)
         {
-            ImGui::Begin("Broadsword Framework");
-            ImGui::Text("Framework is running!");
-            ImGui::Text("Backend: DirectX 11");
-            ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
-            ImGui::Text("Queued Actions: %zu", GameThreadExecutor::Get().PendingCount());
-            ImGui::End();
+            g_ModMenuUI->Render();
         }
+
+        if (g_ConsoleWindow)
+        {
+            g_ConsoleWindow->Render();
+        }
+
+        // Render notifications
+        NotificationManager::Get().Render();
+
+        // Render mod UIs
+        UIContext::Get().RenderModUIs();
 
         // Render ImGui
         ImGui::Render();
@@ -226,17 +345,6 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
     {
         DisableThreadLibraryCalls(hModule);
 
-#ifdef _DEBUG
-        // Allocate console for debug output (stays open for entire session)
-        AllocConsole();
-        FILE* fDummy;
-        freopen_s(&fDummy, "CONOUT$", "w", stdout);
-        freopen_s(&fDummy, "CONOUT$", "w", stderr);
-        SetConsoleTitleA("Broadsword Framework - Debug Console");
-
-        printf("Broadsword Framework\n\n");
-#endif
-
         // Open log file with timestamp
         auto now = std::chrono::system_clock::now();
         auto time = std::chrono::system_clock::to_time_t(now);
@@ -276,7 +384,43 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
         // Small delay to ensure no hooks are executing
         Sleep(100);
 
-        // Cleanup
+        // Save config before cleanup
+        try
+        {
+            nlohmann::json config;
+            UIContext::Get().GetTheme().SaveToConfig(config);
+
+            if (g_ConsoleWindow)
+            {
+                g_ConsoleWindow->SaveToConfig(config);
+            }
+
+            std::ofstream configFile("Broadsword.json");
+            if (configFile.is_open())
+            {
+                configFile << config.dump(2);
+                configFile.close();
+                Log("Saved config to Broadsword.json");
+            }
+        }
+        catch (const std::exception& e)
+        {
+            Log(std::string("Failed to save config: ") + e.what());
+        }
+
+        // Cleanup UI system
+        g_ModMenuUI.reset();
+        g_ConsoleWindow.reset();
+        NotificationManager::Get().Clear();
+        UIContext::Get().Shutdown();
+
+        // Restore original WndProc
+        if (g_Window && oWndProc)
+        {
+            SetWindowLongPtrA(g_Window, GWLP_WNDPROC, (LONG_PTR)oWndProc);
+        }
+
+        // Cleanup render backend
         if (g_RenderBackend)
         {
             g_RenderBackend->ShutdownImGui();
