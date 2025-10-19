@@ -8,8 +8,8 @@
 
 ## Progress Overview
 
-- **Completed:** 3 / 25
-- **In Progress:** Checkpoint 4
+- **Completed:** 4 / 25
+- **In Progress:** Checkpoint 5
 - **Current Phase:** Event System
 
 ---
@@ -38,9 +38,11 @@
 
 ### Phase 2: Event System
 
-- [ ] **Checkpoint 4: EventBus Foundation**
-  - Files: `Services/EventBus/EventBus.hpp`, `Services/EventBus/EventBus.cpp`, `Services/EventBus/EventTypes.hpp`
+- [x] **Checkpoint 4: EventBus Foundation**
+  - Files: `Services/EventBus/EventBus.hpp`, `Services/EventBus/EventTypes.hpp`
   - Commit: "feat: add EventBus with OnFrameEvent"
+  - Completed: 2025-01-19
+  - Build: Verified Debug build succeeds
 
 - [ ] **Checkpoint 5: ModLoader**
   - Files: `Framework/Core/ModLoader.hpp`, `Framework/Core/ModLoader.cpp`
@@ -748,4 +750,4 @@ class QueryEngine {
 ---
 
 **Last Updated:** 2025-01-19
-**Current Checkpoint:** 4 of 25
+**Current Checkpoint:** 5 of 25
