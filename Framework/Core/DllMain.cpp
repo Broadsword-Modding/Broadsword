@@ -150,6 +150,79 @@ static HRESULT __stdcall hkResizeBuffers(IDXGISwapChain* pSwapChain, UINT buffer
     return oResizeBuffers(pSwapChain, bufferCount, width, height, newFormat, swapChainFlags);
 }
 
+// Initialization thread - waits for DirectX to be ready, then hooks it
+DWORD WINAPI BroadswordThread(LPVOID lpParam)
+{
+    Log("Broadsword initialization thread started");
+
+    // Retry loop with timeout
+    const int MAX_RETRIES = 100;      // Maximum attempts
+    const int RETRY_DELAY_MS = 100;   // 100ms between retries
+    const int TIMEOUT_MS = 10000;     // 10 second total timeout
+
+    int attempt = 0;
+    bool kieroInitialized = false;
+
+    Log("Waiting for DirectX to be initialized by the game...");
+
+    while (attempt < MAX_RETRIES && !kieroInitialized)
+    {
+        attempt++;
+
+        // Try to initialize kiero
+        if (VTableHook::Initialize(VTableHook::RenderAPI::DX11))
+        {
+            kieroInitialized = true;
+            Log("kiero initialized successfully on attempt " + std::to_string(attempt));
+        }
+        else
+        {
+            // DirectX not ready yet, wait and retry
+            if (attempt % 10 == 0) // Log every 10 attempts to avoid spam
+            {
+                Log("kiero init attempt " + std::to_string(attempt) + " failed, retrying...");
+            }
+            Sleep(RETRY_DELAY_MS);
+        }
+    }
+
+    if (!kieroInitialized)
+    {
+        Log("CRITICAL ERROR: kiero failed to initialize after " + std::to_string(attempt) + " attempts (" +
+            std::to_string(TIMEOUT_MS / 1000) + " seconds)");
+        Log("DirectX may not be D3D11, or game is using incompatible graphics API");
+        MessageBoxA(nullptr, "Broadsword Framework failed to hook DirectX.\n\n"
+                             "The game may be using D3D12 or Vulkan.\n"
+                             "Check Broadsword_Phase1.log for details.",
+                    "Broadsword Framework - Initialization Failed", MB_OK | MB_ICONERROR);
+        return 1;
+    }
+
+    // Hook Present (index 8)
+    Log("Hooking IDXGISwapChain::Present (index 8)...");
+    if (!VTableHook::Bind<PresentFn>(8, (PresentFn**)&oPresent, hkPresent))
+    {
+        Log("Failed to hook Present!");
+        return 1;
+    }
+    Log("Present hooked successfully");
+
+    // Hook ResizeBuffers (index 13)
+    Log("Hooking IDXGISwapChain::ResizeBuffers (index 13)...");
+    if (!VTableHook::Bind<ResizeBuffersFn>(13, (ResizeBuffersFn**)&oResizeBuffers, hkResizeBuffers))
+    {
+        Log("Failed to hook ResizeBuffers!");
+    }
+    else
+    {
+        Log("ResizeBuffers hooked successfully");
+    }
+
+    Log("Hooks installed - waiting for first Present call to complete initialization...");
+
+    return 0;
+}
+
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved)
 {
     switch (ul_reason_for_call)
@@ -171,45 +244,23 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
         printf("========================================\n\n");
 #endif
 
-        // Open log file
+        // Open log file immediately
         g_LogFile.open("Broadsword_Phase1.log", std::ios::out | std::ios::trunc);
         Log("Broadsword Framework - Phase 1");
         Log("DLL_PROCESS_ATTACH - Broadsword.dll loaded");
 
-        // Initialize kiero for DX11 (Phase 1: DX11 only)
-        // Kiero will wait for DirectX to be initialized by the game
-        Log("Initializing kiero (DX11 mode)...");
-        if (!VTableHook::Initialize(VTableHook::RenderAPI::DX11))
+        // Create initialization thread (don't block DLL_PROCESS_ATTACH)
+        HANDLE hThread = CreateThread(NULL, 0, BroadswordThread, NULL, 0, NULL);
+        if (hThread)
         {
-            Log("Failed to initialize kiero!");
-            return TRUE; // Don't fail DLL load, continue anyway
-        }
-
-        Log("kiero initialized successfully");
-
-        // Hook Present (index 8)
-        // This will be called once DirectX renders a frame
-        Log("Hooking IDXGISwapChain::Present (index 8)...");
-        if (!VTableHook::Bind<PresentFn>(8, (PresentFn**)&oPresent, hkPresent))
-        {
-            Log("Failed to hook Present!");
-            return TRUE;
-        }
-
-        Log("Present hooked successfully");
-
-        // Hook ResizeBuffers (index 13) for window resize handling
-        Log("Hooking IDXGISwapChain::ResizeBuffers (index 13)...");
-        if (!VTableHook::Bind<ResizeBuffersFn>(13, (ResizeBuffersFn**)&oResizeBuffers, hkResizeBuffers))
-        {
-            Log("Failed to hook ResizeBuffers!");
+            CloseHandle(hThread); // We don't need to wait for it
+            Log("Initialization thread created");
         }
         else
         {
-            Log("ResizeBuffers hooked successfully");
+            Log("CRITICAL ERROR: Failed to create initialization thread!");
         }
 
-        Log("Hooks installed - waiting for first Present call to complete initialization...");
         break;
     }
 

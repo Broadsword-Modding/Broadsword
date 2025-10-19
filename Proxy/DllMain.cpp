@@ -89,11 +89,8 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
         {
 #ifdef _DEBUG
             printf("\n[Proxy] CRITICAL ERROR: Failed to load original dwmapi.dll\n");
-            printf("\nPress Enter to close this window...\n");
-            getchar();
-            fclose(stdout);
-            fclose(stderr);
-            FreeConsole();
+            printf("See MessageBox for details.\n");
+            // Don't close console - let user see the error
 #endif
             MessageBoxA(nullptr, "Failed to load original dwmapi.dll from System32.", "Broadsword Framework",
                         MB_OK | MB_ICONERROR);
@@ -115,13 +112,11 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
             printf("Proxy loaded, but Broadsword.dll failed to load.\n");
         }
         printf("========================================\n\n");
-        printf("Press Enter to continue and start game...\n");
-        getchar();
+        printf("This console will auto-close when you exit the game.\n");
+        printf("You can also close it manually (X button).\n\n");
 
-        // Close console
-        fclose(stdout);
-        fclose(stderr);
-        FreeConsole();
+        // Don't call getchar() - it blocks the game!
+        // Don't close console - let it stay open for debugging
 #endif
         break;
     }
