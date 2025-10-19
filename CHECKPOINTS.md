@@ -8,8 +8,8 @@
 
 ## Progress Overview
 
-- **Completed:** 1 / 25
-- **In Progress:** Checkpoint 2
+- **Completed:** 2 / 25
+- **In Progress:** Checkpoint 3
 - **Current Phase:** Mod API Foundation
 
 ---
@@ -24,9 +24,11 @@
   - Completed: 2025-01-19
   - Build: Verified Debug build succeeds
 
-- [ ] **Checkpoint 2: Context Objects**
+- [x] **Checkpoint 2: Context Objects**
   - Files: `ModAPI/Frame.hpp`, `Framework/Core/ModContext.hpp`
   - Commit: "feat: add Frame and ModContext dependency injection"
+  - Completed: 2025-01-19
+  - Build: Verified Debug build succeeds
 
 - [ ] **Checkpoint 3: Result Monad**
   - Files: `ModAPI/Result.hpp`, `ModAPI/Error.hpp`
@@ -744,4 +746,4 @@ class QueryEngine {
 ---
 
 **Last Updated:** 2025-01-19
-**Current Checkpoint:** 2 of 25
+**Current Checkpoint:** 3 of 25
