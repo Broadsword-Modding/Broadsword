@@ -62,6 +62,7 @@ add_library(Broadsword SHARED
     # Services - UI
     Services/UI/Theme.cpp
     Services/UI/UIContext.cpp
+    Services/UI/BindingManager.cpp
 
     # Framework - UI
     Framework/UI/ConsoleWindow.cpp
