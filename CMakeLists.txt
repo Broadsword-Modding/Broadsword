@@ -31,6 +31,9 @@ find_package(glm CONFIG REQUIRED)
 find_package(toml11 CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 
+# Collect all SDK source files
+file(GLOB_RECURSE SDK_SOURCES "Engine/SDK/SDK/*_functions.cpp")
+
 # Broadsword main library
 add_library(Broadsword SHARED
     # Framework Core
@@ -61,8 +64,15 @@ add_library(Broadsword SHARED
 
     # Framework - UI
     Framework/UI/ConsoleWindow.cpp
+    Framework/UI/SettingsWindow.cpp
+    Framework/UI/AboutWindow.cpp
     Framework/UI/NotificationManager.cpp
     Framework/UI/ModMenuUI.cpp
+
+    # Engine - SDK
+    Engine/SDK/SDKPch.cpp
+    Engine/SDK/SDK/Basic.cpp
+    ${SDK_SOURCES}
 )
 
 target_include_directories(Broadsword
@@ -73,6 +83,7 @@ target_include_directories(Broadsword
         ${CMAKE_CURRENT_SOURCE_DIR}/Foundation/Hooks/kiero
         ${CMAKE_CURRENT_SOURCE_DIR}/Framework
         ${CMAKE_CURRENT_SOURCE_DIR}/Engine
+        ${CMAKE_CURRENT_SOURCE_DIR}/Engine/SDK
         ${CMAKE_CURRENT_SOURCE_DIR}/Services
 )
 

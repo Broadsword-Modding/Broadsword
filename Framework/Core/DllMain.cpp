@@ -16,6 +16,8 @@
 #include "../../Services/Logging/Logger.hpp"
 #include "../../Services/UI/UIContext.hpp"
 #include "../UI/ConsoleWindow.hpp"
+#include "../UI/SettingsWindow.hpp"
+#include "../UI/AboutWindow.hpp"
 #include "../UI/NotificationManager.hpp"
 #include "../UI/ModMenuUI.hpp"
 #include <nlohmann/json.hpp>
@@ -28,6 +30,8 @@ using namespace Broadsword::Framework;
 // Global state
 static std::unique_ptr<RenderBackend> g_RenderBackend = nullptr;
 static std::unique_ptr<ConsoleWindow> g_ConsoleWindow = nullptr;
+static std::unique_ptr<SettingsWindow> g_SettingsWindow = nullptr;
+static std::unique_ptr<AboutWindow> g_AboutWindow = nullptr;
 static std::unique_ptr<ModMenuUI> g_ModMenuUI = nullptr;
 static bool g_Initialized = false;
 static bool g_ShuttingDown = false;
@@ -44,14 +48,18 @@ static WNDPROC oWndProc = nullptr;
 // Custom WndProc to handle input
 static LRESULT CALLBACK hkWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-    // Handle INSERT key to toggle UI visibility
-    if (msg == WM_KEYDOWN && wParam == VK_INSERT)
+    // Handle menu toggle key to toggle UI visibility
+    if (msg == WM_KEYDOWN && g_SettingsWindow)
     {
-        if (g_ModMenuUI)
+        int menuKey = g_SettingsWindow->GetMenuToggleKey();
+        if (static_cast<int>(wParam) == menuKey)
         {
-            g_ModMenuUI->ToggleVisible();
+            if (g_ModMenuUI)
+            {
+                g_ModMenuUI->ToggleVisible();
+            }
+            return 0;
         }
-        return 0;
     }
 
     // Let ImGui handle input when UI is visible
@@ -174,25 +182,30 @@ static HRESULT __stdcall hkPresent(IDXGISwapChain* pSwapChain, UINT syncInterval
 
             // Create UI windows
             g_ConsoleWindow = std::make_unique<ConsoleWindow>();
+            g_SettingsWindow = std::make_unique<SettingsWindow>();
+            g_AboutWindow = std::make_unique<AboutWindow>();
             g_ModMenuUI = std::make_unique<ModMenuUI>();
             g_ModMenuUI->SetConsoleWindow(g_ConsoleWindow.get());
+            g_ModMenuUI->SetSettingsWindow(g_SettingsWindow.get());
+            g_ModMenuUI->SetAboutWindow(g_AboutWindow.get());
 
-            // Load console config after creation
-            std::ifstream consoleConfigFile(configPath);
-            if (consoleConfigFile.is_open())
+            // Load window configs after creation
+            std::ifstream windowConfigFile(configPath);
+            if (windowConfigFile.is_open())
             {
                 try
                 {
                     nlohmann::json config;
-                    consoleConfigFile >> config;
-                    consoleConfigFile.close();
+                    windowConfigFile >> config;
+                    windowConfigFile.close();
 
                     g_ConsoleWindow->LoadFromConfig(config);
-                    if (g_LoggerInitialized) LOG_INFO("Loaded console settings from config");
+                    g_SettingsWindow->LoadFromConfig(config);
+                    if (g_LoggerInitialized) LOG_INFO("Loaded window settings from config");
                 }
                 catch (const std::exception& e)
                 {
-                    if (g_LoggerInitialized) LOG_ERROR("Failed to load console config: {}", e.what());
+                    if (g_LoggerInitialized) LOG_ERROR("Failed to load window config: {}", e.what());
                 }
             }
 
@@ -251,6 +264,16 @@ static HRESULT __stdcall hkPresent(IDXGISwapChain* pSwapChain, UINT syncInterval
         if (g_ConsoleWindow)
         {
             g_ConsoleWindow->Render();
+        }
+
+        if (g_SettingsWindow)
+        {
+            g_SettingsWindow->Render();
+        }
+
+        if (g_AboutWindow)
+        {
+            g_AboutWindow->Render();
         }
 
         // Render notifications
@@ -394,6 +417,11 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
                 g_ConsoleWindow->SaveToConfig(config);
             }
 
+            if (g_SettingsWindow)
+            {
+                g_SettingsWindow->SaveToConfig(config);
+            }
+
             std::ofstream configFile("Broadsword.json");
             if (configFile.is_open())
             {
@@ -411,6 +439,8 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
         if (g_LoggerInitialized) LOG_INFO("Cleaning up UI system...");
         g_ModMenuUI.reset();
         g_ConsoleWindow.reset();
+        g_SettingsWindow.reset();
+        g_AboutWindow.reset();
         NotificationManager::Get().Clear();
         UIContext::Get().Shutdown();
 

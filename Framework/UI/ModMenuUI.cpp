@@ -1,6 +1,8 @@
 #include "ModMenuUI.hpp"
 #include "../../Services/UI/UIContext.hpp"
 #include "ConsoleWindow.hpp"
+#include "SettingsWindow.hpp"
+#include "AboutWindow.hpp"
 #include <algorithm>
 
 namespace Broadsword::Framework {
@@ -90,6 +92,7 @@ void ModMenuUI::Render()
 
     // Settings button
     {
+        bool isOpen = m_SettingsWindow && m_SettingsWindow->IsVisible();
         bool isHovered = false;
 
         ImVec2 textPos = ImGui::GetCursorScreenPos();
@@ -104,16 +107,19 @@ void ModMenuUI::Render()
 
         if (ImGui::Button("##Settings", ImVec2(buttonWidth, textSize.y)))
         {
-            // Open settings window (future implementation)
+            if (m_SettingsWindow)
+            {
+                m_SettingsWindow->SetVisible(!m_SettingsWindow->IsVisible());
+            }
         }
         isHovered = ImGui::IsItemHovered();
 
         ImGui::PopStyleColor(3);
 
         ImDrawList* drawList = ImGui::GetWindowDrawList();
-        ImVec4 textColor = isHovered ? theme.accent : theme.text;
+        ImVec4 textColor = (isOpen || isHovered) ? theme.accent : theme.text;
 
-        if (isHovered)
+        if (isOpen || isHovered)
         {
             drawList->AddText(ImVec2(textX + 0.5f, textPos.y), ImGui::GetColorU32(textColor), label);
         }
@@ -131,6 +137,7 @@ void ModMenuUI::Render()
 
     // About button
     {
+        bool isOpen = m_AboutWindow && m_AboutWindow->IsVisible();
         bool isHovered = false;
 
         ImVec2 textPos = ImGui::GetCursorScreenPos();
@@ -145,16 +152,19 @@ void ModMenuUI::Render()
 
         if (ImGui::Button("##About", ImVec2(buttonWidth, textSize.y)))
         {
-            // Open about window (future implementation)
+            if (m_AboutWindow)
+            {
+                m_AboutWindow->SetVisible(!m_AboutWindow->IsVisible());
+            }
         }
         isHovered = ImGui::IsItemHovered();
 
         ImGui::PopStyleColor(3);
 
         ImDrawList* drawList = ImGui::GetWindowDrawList();
-        ImVec4 textColor = isHovered ? theme.accent : theme.text;
+        ImVec4 textColor = (isOpen || isHovered) ? theme.accent : theme.text;
 
-        if (isHovered)
+        if (isOpen || isHovered)
         {
             drawList->AddText(ImVec2(textX + 0.5f, textPos.y), ImGui::GetColorU32(textColor), label);
         }
