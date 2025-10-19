@@ -14,6 +14,7 @@
     "minhook",
     "nlohmann-json",
     "glm",
-    "toml11"
+    "toml11",
+    "fmt"
   ]
 }

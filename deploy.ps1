@@ -175,6 +175,7 @@ $frameworkSuccess = Deploy-File -SourcePath $FrameworkDll -DestPath $FrameworkDe
 # Deploy vcpkg runtime dependencies
 $VcpkgBinDir = Join-Path $ScriptDir "build\vcpkg_installed\x64-windows\debug\bin"
 
+# MinHook DLL
 $MinHookDllName = "minhook.x64d.dll"
 $MinHookDll = Join-Path $VcpkgBinDir $MinHookDllName
 $MinHookDest = Join-Path $GamePath $MinHookDllName
@@ -186,7 +187,19 @@ if (Test-Path $MinHookDll) {
     Write-Host "  [WARN]    $MinHookDllName not found in vcpkg" -ForegroundColor Yellow
 }
 
-if (-not ($proxySuccess -and $frameworkSuccess -and $minHookSuccess)) {
+# fmt DLL (needed by Logger)
+$FmtDllName = "fmtd.dll"
+$FmtDll = Join-Path $VcpkgBinDir $FmtDllName
+$FmtDest = Join-Path $GamePath $FmtDllName
+
+$fmtSuccess = $true
+if (Test-Path $FmtDll) {
+    $fmtSuccess = Deploy-File -SourcePath $FmtDll -DestPath $FmtDest -DisplayName $FmtDllName -DoBackup $BackupExisting
+} else {
+    Write-Host "  [WARN]    $FmtDllName not found in vcpkg" -ForegroundColor Yellow
+}
+
+if (-not ($proxySuccess -and $frameworkSuccess -and $minHookSuccess -and $fmtSuccess)) {
     Write-Host ""
     Write-Host "Error copying framework files" -ForegroundColor Red
     Write-Host ""

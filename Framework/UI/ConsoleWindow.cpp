@@ -1,4 +1,5 @@
 #include "ConsoleWindow.hpp"
+#include "../../Services/Logging/Logger.hpp"
 #include "../../Services/UI/UIContext.hpp"
 #include <algorithm>
 #include <chrono>
@@ -29,7 +30,9 @@ void ConsoleWindow::Render()
     ImGui::SetNextWindowPos(ImVec2(workPos.x, workPos.y + workSize.y - consoleHeight), ImGuiCond_Always);
     ImGui::SetNextWindowSize(ImVec2(workSize.x, consoleHeight), ImGuiCond_Always);
 
-    if (!ImGui::Begin("Console", &m_Visible, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize))
+    ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse;
+
+    if (!ImGui::Begin("Console", &m_Visible, windowFlags))
     {
         ImGui::End();
         return;
@@ -79,28 +82,55 @@ void ConsoleWindow::Render()
 
     const std::string searchStr = m_SearchBuffer;
 
-    for (const auto& msg : m_Messages)
+    // Query logs from Logger
+    auto logs = Services::Logger::Get().QueryLogs();
+
+    for (const auto& entry : logs)
     {
+        // Convert Services::LogLevel to Framework::LogLevel for filtering
+        Framework::LogLevel level;
+        switch (entry.level)
+        {
+        case Services::LogLevel::Trace:
+            level = Framework::LogLevel::Trace;
+            break;
+        case Services::LogLevel::Debug:
+            level = Framework::LogLevel::Debug;
+            break;
+        case Services::LogLevel::Info:
+            level = Framework::LogLevel::Info;
+            break;
+        case Services::LogLevel::Warning:
+            level = Framework::LogLevel::Warning;
+            break;
+        case Services::LogLevel::Error:
+            level = Framework::LogLevel::Error;
+            break;
+        case Services::LogLevel::Critical:
+            level = Framework::LogLevel::Critical;
+            break;
+        }
+
         // Apply log level filter
         bool show = false;
-        switch (msg.level)
+        switch (level)
         {
-        case LogLevel::Trace:
+        case Framework::LogLevel::Trace:
             show = m_ShowTrace;
             break;
-        case LogLevel::Debug:
+        case Framework::LogLevel::Debug:
             show = m_ShowDebug;
             break;
-        case LogLevel::Info:
+        case Framework::LogLevel::Info:
             show = m_ShowInfo;
             break;
-        case LogLevel::Warning:
+        case Framework::LogLevel::Warning:
             show = m_ShowWarning;
             break;
-        case LogLevel::Error:
+        case Framework::LogLevel::Error:
             show = m_ShowError;
             break;
-        case LogLevel::Critical:
+        case Framework::LogLevel::Critical:
             show = m_ShowCritical;
             break;
         }
@@ -113,7 +143,7 @@ void ConsoleWindow::Render()
         // Apply search filter
         if (!searchStr.empty())
         {
-            std::string msgLower = msg.message;
+            std::string msgLower = entry.message;
             std::transform(msgLower.begin(), msgLower.end(), msgLower.begin(), ::tolower);
 
             std::string searchLower = searchStr;
@@ -125,15 +155,32 @@ void ConsoleWindow::Render()
             }
         }
 
-        // Render message
-        ImVec4 color = GetColorForLogLevel(msg.level);
-        const char* icon = GetIconForLogLevel(msg.level);
+        // Render message with frame number
+        ImVec4 color = GetColorForLogLevel(level);
+        const char* icon = GetIconForLogLevel(level);
 
-        ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "[%s]", msg.timestamp.c_str());
+        // Format timestamp
+        auto t = std::chrono::system_clock::to_time_t(entry.timestamp);
+        auto ms =
+            std::chrono::duration_cast<std::chrono::milliseconds>(entry.timestamp.time_since_epoch()) % 1000;
+        std::tm localTime;
+        localtime_s(&localTime, &t);
+        char timeBuffer[32];
+        std::snprintf(timeBuffer, sizeof(timeBuffer), "%02d:%02d:%02d.%03d", localTime.tm_hour, localTime.tm_min,
+                      localTime.tm_sec, static_cast<int>(ms.count()));
+
+        ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "[%s]", timeBuffer);
+        ImGui::SameLine();
+        ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "[F:%llu]", entry.frame_number);
         ImGui::SameLine();
         ImGui::TextColored(color, "%s", icon);
         ImGui::SameLine();
-        ImGui::TextColored(color, "%s", msg.message.c_str());
+        if (!entry.context.mod_name.empty())
+        {
+            ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.9f, 1.0f), "[%s]", entry.context.mod_name.c_str());
+            ImGui::SameLine();
+        }
+        ImGui::TextColored(color, "%s", entry.message.c_str());
     }
 
     // Auto-scroll to bottom
@@ -211,15 +258,15 @@ const char* ConsoleWindow::GetIconForLogLevel(LogLevel level) const
     case LogLevel::Debug:
         return "[DEBUG]";
     case LogLevel::Info:
-        return "[INFO]";
+        return "[INFO ]";
     case LogLevel::Warning:
-        return "[WARN]";
+        return "[WARN ]";
     case LogLevel::Error:
         return "[ERROR]";
     case LogLevel::Critical:
-        return "[CRIT]";
+        return "[CRIT ]";
     default:
-        return "[LOG]";
+        return "[LOG  ]";
     }
 }
 

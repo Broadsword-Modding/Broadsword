@@ -27,7 +27,9 @@ void ModMenuUI::Render()
     ImGui::SetNextWindowSize(ImVec2(400, 700), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
 
-    if (!ImGui::Begin("Broadsword Framework", &m_Visible))
+    ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoCollapse;
+
+    if (!ImGui::Begin("Broadsword Framework", &m_Visible, windowFlags))
     {
         ImGui::End();
         return;

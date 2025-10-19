@@ -13,6 +13,7 @@
 #include "../../Foundation/Hooks/VTableHook.hpp"
 #include "../../Foundation/Threading/GameThreadExecutor.hpp"
 #include "../Graphics/RenderBackend.hpp"
+#include "../../Services/Logging/Logger.hpp"
 #include "../../Services/UI/UIContext.hpp"
 #include "../UI/ConsoleWindow.hpp"
 #include "../UI/NotificationManager.hpp"
@@ -31,25 +32,8 @@ static std::unique_ptr<ModMenuUI> g_ModMenuUI = nullptr;
 static bool g_Initialized = false;
 static bool g_ShuttingDown = false;
 static HWND g_Window = nullptr;
-
-// Logging
-static std::ofstream g_LogFile;
-
-static void Log(const std::string& message)
-{
-    // Write to file
-    if (g_LogFile.is_open())
-    {
-        g_LogFile << message << std::endl;
-        g_LogFile.flush();
-    }
-
-    // Also add to in-game console if initialized
-    if (g_ConsoleWindow)
-    {
-        g_ConsoleWindow->AddMessage(LogLevel::Info, message);
-    }
-}
+static uint64_t g_FrameNumber = 0;
+static std::atomic<bool> g_LoggerInitialized = false;
 
 // Forward declare Win32 message handler
 extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -103,46 +87,61 @@ static HRESULT __stdcall hkPresent(IDXGISwapChain* pSwapChain, UINT syncInterval
     // (DirectX is guaranteed to be initialized by now)
     if (!g_Initialized)
     {
-        Log("First Present call detected - initializing Broadsword Framework...");
+        // Wait for logger to be initialized by BroadswordThread
+        int waitCount = 0;
+        while (!g_LoggerInitialized && waitCount < 100)
+        {
+            Sleep(10);
+            waitCount++;
+        }
+
+        if (g_LoggerInitialized)
+        {
+            Logger::Get().PushContext("Broadsword", "Initialization");
+            LOG_INFO("First Present call detected - initializing Broadsword Framework...");
+        }
 
         // Get window handle
         DXGI_SWAP_CHAIN_DESC desc;
         pSwapChain->GetDesc(&desc);
         g_Window = desc.OutputWindow;
-        Log("Got window handle");
+        if (g_LoggerInitialized)
+        {
+            LOG_DEBUG("Got window handle: 0x{:X}", reinterpret_cast<uintptr_t>(g_Window));
+        }
 
         // Initialize ImGui context
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
         ImGuiIO& io = ImGui::GetIO();
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-        Log("ImGui context created");
+        if (g_LoggerInitialized) LOG_INFO("ImGui context created");
 
         // Initialize ImGui Win32 backend
         ImGui_ImplWin32_Init(g_Window);
-        Log("ImGui Win32 backend initialized");
+        if (g_LoggerInitialized) LOG_INFO("ImGui Win32 backend initialized");
 
         // Hook WndProc for input handling
         oWndProc = (WNDPROC)SetWindowLongPtrA(g_Window, GWLP_WNDPROC, (LONG_PTR)hkWndProc);
         if (oWndProc)
         {
-            Log("WndProc hooked successfully");
+            if (g_LoggerInitialized) LOG_INFO("WndProc hooked successfully");
         }
         else
         {
-            Log("Failed to hook WndProc!");
+            if (g_LoggerInitialized) LOG_ERROR("Failed to hook WndProc!");
         }
 
         // Initialize DX11 render backend
-        Log("Creating DX11 render backend...");
+        if (g_LoggerInitialized) LOG_INFO("Creating DX11 render backend...");
         g_RenderBackend = CreateRenderBackend(RenderBackend::API::DX11);
 
         if (g_RenderBackend && g_RenderBackend->InitializeImGui(pSwapChain))
         {
-            Log("DX11 backend initialized successfully");
+            if (g_LoggerInitialized) LOG_INFO("DX11 backend initialized successfully");
 
             // Initialize UI system
-            Log("Initializing UI system...");
+            if (g_LoggerInitialized) LOG_INFO("Initializing UI system...");
             UIContext::Get().Initialize();
 
             // Load config file if it exists
@@ -157,21 +156,21 @@ static HRESULT __stdcall hkPresent(IDXGISwapChain* pSwapChain, UINT syncInterval
                     configFile.close();
 
                     UIContext::Get().GetTheme().LoadFromConfig(config);
-                    Log("Loaded config from Broadsword.json");
+                    if (g_LoggerInitialized) LOG_INFO("Loaded config from Broadsword.json");
                 }
                 catch (const std::exception& e)
                 {
-                    Log(std::string("Failed to parse config: ") + e.what());
+                    if (g_LoggerInitialized) LOG_ERROR("Failed to parse config: {}", e.what());
                 }
             }
             else
             {
-                Log("No config file found, using defaults");
+                if (g_LoggerInitialized) LOG_INFO("No config file found, using defaults");
             }
 
             // Apply theme to ImGui
             UIContext::Get().GetTheme().ApplyToImGui();
-            Log("Theme applied to ImGui");
+            if (g_LoggerInitialized) LOG_INFO("Theme applied to ImGui");
 
             // Create UI windows
             g_ConsoleWindow = std::make_unique<ConsoleWindow>();
@@ -189,40 +188,52 @@ static HRESULT __stdcall hkPresent(IDXGISwapChain* pSwapChain, UINT syncInterval
                     consoleConfigFile.close();
 
                     g_ConsoleWindow->LoadFromConfig(config);
-                    Log("Loaded console settings from config");
+                    if (g_LoggerInitialized) LOG_INFO("Loaded console settings from config");
                 }
                 catch (const std::exception& e)
                 {
-                    Log(std::string("Failed to load console config: ") + e.what());
+                    if (g_LoggerInitialized) LOG_ERROR("Failed to load console config: {}", e.what());
                 }
             }
 
-            Log("UI windows created");
+            if (g_LoggerInitialized) LOG_INFO("UI windows created");
 
             g_Initialized = true;
         }
         else
         {
-            Log("Failed to initialize DX11 backend!");
+            if (g_LoggerInitialized) LOG_ERROR("Failed to initialize DX11 backend!");
             g_RenderBackend.reset();
             g_Initialized = false;
         }
 
         if (g_Initialized)
         {
-            Log("Broadsword Framework initialized successfully!");
+            if (g_LoggerInitialized)
+            {
+                LOG_INFO("Broadsword Framework initialized successfully!");
+                Logger::Get().PopContext();
+            }
 
             // Show welcome notification
             NotificationManager::Get().Success("Broadsword Framework", "Framework initialized successfully!");
         }
         else
         {
-            Log("Broadsword Framework initialization FAILED!");
+            if (g_LoggerInitialized)
+            {
+                LOG_CRITICAL("Broadsword Framework initialization FAILED!");
+                Logger::Get().PopContext();
+            }
         }
     }
 
     if (g_Initialized && g_RenderBackend)
     {
+        // Update frame counter
+        g_FrameNumber++;
+        Logger::Get().SetCurrentFrame(g_FrameNumber);
+
         // Process game thread actions
         GameThreadExecutor::Get().ProcessQueue();
 
@@ -271,7 +282,12 @@ static HRESULT __stdcall hkResizeBuffers(IDXGISwapChain* pSwapChain, UINT buffer
 // Initialization thread - waits for DirectX to be ready, then hooks it
 DWORD WINAPI BroadswordThread(LPVOID lpParam)
 {
-    Log("Broadsword initialization thread started");
+    // Initialize logger early
+    Logger::Get().Initialize();
+    g_LoggerInitialized = true;
+    Logger::Get().PushContext("Broadsword", "Bootstrap");
+
+    LOG_INFO("Broadsword initialization thread started");
 
     // Retry loop with timeout
     const int MAX_RETRIES = 100;      // Maximum attempts
@@ -281,7 +297,7 @@ DWORD WINAPI BroadswordThread(LPVOID lpParam)
     int attempt = 0;
     bool kieroInitialized = false;
 
-    Log("Waiting for DirectX to be initialized by the game...");
+    LOG_INFO("Waiting for DirectX to be initialized by the game...");
 
     while (attempt < MAX_RETRIES && !kieroInitialized)
     {
@@ -291,14 +307,14 @@ DWORD WINAPI BroadswordThread(LPVOID lpParam)
         if (VTableHook::Initialize(VTableHook::RenderAPI::DX11))
         {
             kieroInitialized = true;
-            Log("kiero initialized successfully on attempt " + std::to_string(attempt));
+            LOG_INFO("kiero initialized successfully on attempt {}", attempt);
         }
         else
         {
             // DirectX not ready yet, wait and retry
             if (attempt % 10 == 0) // Log every 10 attempts to avoid spam
             {
-                Log("kiero init attempt " + std::to_string(attempt) + " failed, retrying...");
+                LOG_DEBUG("kiero init attempt {} failed, retrying...", attempt);
             }
             Sleep(RETRY_DELAY_MS);
         }
@@ -306,33 +322,35 @@ DWORD WINAPI BroadswordThread(LPVOID lpParam)
 
     if (!kieroInitialized)
     {
-        Log("CRITICAL ERROR: kiero failed to initialize after " + std::to_string(attempt) + " attempts (" +
-            std::to_string(TIMEOUT_MS / 1000) + " seconds)");
-        Log("DirectX may not be D3D11, or game is using incompatible graphics API");
+        LOG_CRITICAL("kiero failed to initialize after {} attempts ({} seconds)", attempt, TIMEOUT_MS / 1000);
+        LOG_CRITICAL("DirectX may not be D3D11, or game is using incompatible graphics API");
+        Logger::Get().PopContext();
         return 1;
     }
 
     // Hook Present (index 8)
-    Log("Hooking IDXGISwapChain::Present (index 8)...");
+    LOG_INFO("Hooking IDXGISwapChain::Present (index 8)...");
     if (!VTableHook::Bind<PresentFn>(8, (PresentFn**)&oPresent, hkPresent))
     {
-        Log("Failed to hook Present!");
+        LOG_ERROR("Failed to hook Present!");
+        Logger::Get().PopContext();
         return 1;
     }
-    Log("Present hooked successfully");
+    LOG_INFO("Present hooked successfully");
 
     // Hook ResizeBuffers (index 13)
-    Log("Hooking IDXGISwapChain::ResizeBuffers (index 13)...");
+    LOG_INFO("Hooking IDXGISwapChain::ResizeBuffers (index 13)...");
     if (!VTableHook::Bind<ResizeBuffersFn>(13, (ResizeBuffersFn**)&oResizeBuffers, hkResizeBuffers))
     {
-        Log("Failed to hook ResizeBuffers!");
+        LOG_ERROR("Failed to hook ResizeBuffers!");
     }
     else
     {
-        Log("ResizeBuffers hooked successfully");
+        LOG_INFO("ResizeBuffers hooked successfully");
     }
 
-    Log("Hooks installed - waiting for first Present call to complete initialization...");
+    LOG_INFO("Hooks installed - waiting for first Present call to complete initialization...");
+    Logger::Get().PopContext();
 
     return 0;
 }
@@ -345,32 +363,12 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
     {
         DisableThreadLibraryCalls(hModule);
 
-        // Open log file with timestamp
-        auto now = std::chrono::system_clock::now();
-        auto time = std::chrono::system_clock::to_time_t(now);
-        std::tm localTime;
-        localtime_s(&localTime, &time);
-
-        char logFilename[512];
-        sprintf_s(logFilename, "Broadsword_%04d%02d%02d_%02d%02d%02d.log",
-                  localTime.tm_year + 1900, localTime.tm_mon + 1,
-                  localTime.tm_mday, localTime.tm_hour, localTime.tm_min,
-                  localTime.tm_sec);
-
-        g_LogFile.open(logFilename, std::ios::out | std::ios::trunc);
-        Log("Broadsword Framework");
-        Log("DLL_PROCESS_ATTACH - Broadsword.dll loaded");
-
         // Create initialization thread (don't block DLL_PROCESS_ATTACH)
+        // Logger will be initialized in the thread
         HANDLE hThread = CreateThread(NULL, 0, BroadswordThread, NULL, 0, NULL);
         if (hThread)
         {
             CloseHandle(hThread); // We don't need to wait for it
-            Log("Initialization thread created");
-        }
-        else
-        {
-            Log("CRITICAL ERROR: Failed to create initialization thread!");
         }
 
         break;
@@ -378,7 +376,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
 
     case DLL_PROCESS_DETACH:
     {
-        Log("DLL_PROCESS_DETACH");
+        if (g_LoggerInitialized) LOG_INFO("DLL_PROCESS_DETACH - shutting down");
         g_ShuttingDown = true;
 
         // Small delay to ensure no hooks are executing
@@ -387,6 +385,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
         // Save config before cleanup
         try
         {
+            if (g_LoggerInitialized) LOG_INFO("Saving configuration...");
             nlohmann::json config;
             UIContext::Get().GetTheme().SaveToConfig(config);
 
@@ -400,15 +399,16 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
             {
                 configFile << config.dump(2);
                 configFile.close();
-                Log("Saved config to Broadsword.json");
+                if (g_LoggerInitialized) LOG_INFO("Saved config to Broadsword.json");
             }
         }
         catch (const std::exception& e)
         {
-            Log(std::string("Failed to save config: ") + e.what());
+            if (g_LoggerInitialized) LOG_ERROR("Failed to save config: {}", e.what());
         }
 
         // Cleanup UI system
+        if (g_LoggerInitialized) LOG_INFO("Cleaning up UI system...");
         g_ModMenuUI.reset();
         g_ConsoleWindow.reset();
         NotificationManager::Get().Clear();
@@ -418,11 +418,13 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
         if (g_Window && oWndProc)
         {
             SetWindowLongPtrA(g_Window, GWLP_WNDPROC, (LONG_PTR)oWndProc);
+            if (g_LoggerInitialized) LOG_DEBUG("WndProc restored");
         }
 
         // Cleanup render backend
         if (g_RenderBackend)
         {
+            if (g_LoggerInitialized) LOG_INFO("Shutting down render backend...");
             g_RenderBackend->ShutdownImGui();
             g_RenderBackend.reset();
         }
@@ -431,12 +433,18 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
         {
             ImGui_ImplWin32_Shutdown();
             ImGui::DestroyContext();
+            if (g_LoggerInitialized) LOG_DEBUG("ImGui shut down");
         }
 
         VTableHook::Shutdown();
+        if (g_LoggerInitialized) LOG_DEBUG("VTableHook shut down");
 
-        Log("Broadsword Framework shut down");
-        g_LogFile.close();
+        if (g_LoggerInitialized)
+        {
+            LOG_INFO("Broadsword Framework shut down successfully");
+            // Shut down logger last
+            Logger::Get().Shutdown();
+        }
         break;
     }
     }

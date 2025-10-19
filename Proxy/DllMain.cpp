@@ -20,7 +20,32 @@ static HMODULE LoadOriginalDwmapi()
 // Load Broadsword.dll (the actual framework)
 static bool LoadBroadswordFramework()
 {
+    // Simple file-based logging for debugging
+    FILE* debugLog = nullptr;
+    fopen_s(&debugLog, "dwmapi_proxy_debug.log", "w");
+    if (debugLog)
+    {
+        fprintf(debugLog, "dwmapi.dll proxy loaded\n");
+        fprintf(debugLog, "Attempting to load Broadsword.dll...\n");
+        fflush(debugLog);
+    }
+
     HMODULE hBroadsword = LoadLibraryA("Broadsword.dll");
+
+    if (debugLog)
+    {
+        if (hBroadsword)
+        {
+            fprintf(debugLog, "Broadsword.dll loaded successfully at 0x%p\n", hBroadsword);
+        }
+        else
+        {
+            DWORD error = GetLastError();
+            fprintf(debugLog, "Failed to load Broadsword.dll, error code: %lu\n", error);
+        }
+        fclose(debugLog);
+    }
+
     return hBroadsword != nullptr;
 }
 

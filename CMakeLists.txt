@@ -29,6 +29,7 @@ find_package(minhook CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(glm CONFIG REQUIRED)
 find_package(toml11 CONFIG REQUIRED)
+find_package(fmt CONFIG REQUIRED)
 
 # Broadsword main library
 add_library(Broadsword SHARED
@@ -50,6 +51,9 @@ add_library(Broadsword SHARED
     Framework/Graphics/RenderBackend.cpp
     Framework/Graphics/DX11Backend.cpp
     # Framework/Graphics/DX12Backend.cpp  # TODO: Add in Phase 2
+
+    # Services - Logging
+    Services/Logging/Logger.cpp
 
     # Services - UI
     Services/UI/Theme.cpp
@@ -79,6 +83,7 @@ target_link_libraries(Broadsword
         nlohmann_json::nlohmann_json
         glm::glm
         toml11::toml11
+        fmt::fmt
         d3d11.lib
         d3d12.lib
         dxgi.lib
