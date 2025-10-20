@@ -347,6 +347,84 @@ private:
         // Body Tonus
         frame.ui.SliderFloat("Body Tonus Multiplier", &m_BodyTonusMultiplier, 1.0f, 10.0f);
         frame.ui.Checkbox("No Body Weakening", &m_BodyTonusNoWeakening);
+
+        frame.ui.Separator();
+
+        // Possess Nearest Willie
+        if (frame.ui.Button("Possess Nearest Willie")) {
+            PossessNearestWillie(frame);
+        }
+    }
+
+    void PossessNearestWillie(Broadsword::Frame& frame) {
+        auto worldResult = frame.world.GetWorld();
+        if (!worldResult) {
+            frame.log.Warn("Cannot possess: world not loaded");
+            return;
+        }
+        SDK::UWorld* world = worldResult.Value();
+
+        auto controllerResult = frame.world.GetPlayerController();
+        if (!controllerResult) {
+            frame.log.Warn("Cannot possess: controller not found");
+            return;
+        }
+        SDK::APlayerController* controller = controllerResult.Value();
+
+        SDK::APawn* currentPawn = controller->K2_GetPawn();
+
+        if (m_PossessedWillie && currentPawn != m_PossessedWillie) {
+            m_PrevAIController = nullptr;
+            m_OriginalPawn = nullptr;
+            m_PossessedWillie = nullptr;
+        }
+
+        if (!m_PossessedWillie) {
+            m_OriginalPawn = currentPawn;
+            SDK::AWillie_BP_C* nearest = nullptr;
+            float minDist = GameConstants::MAX_DISTANCE;
+
+            ForEachWillie(world, m_Player, [&](SDK::AWillie_BP_C* willie) {
+                if (!m_Player) return;
+                const float dist = m_Player->GetDistanceTo(willie);
+                if (dist < minDist) {
+                    minDist = dist;
+                    nearest = willie;
+                }
+            });
+
+            if (!nearest) {
+                frame.log.Warn("No NPCs found to possess");
+                return;
+            }
+
+            auto* nearestController = nearest->GetController();
+            if (nearestController && !nearest->IsA(SDK::AWillie_BP_NoBrain_C::StaticClass())) {
+                m_PrevAIController = static_cast<SDK::AAIController*>(nearestController);
+                m_PrevAIController->SetActorTickEnabled(false);
+            }
+
+            controller->Possess(nearest);
+            nearest->Player = true;
+            m_PossessedWillie = nearest;
+            m_Player = nearest;
+            frame.log.Info("Possessed nearest NPC");
+        } else {
+            auto* williePawn = static_cast<SDK::AWillie_BP_C*>(currentPawn);
+            controller->Possess(m_OriginalPawn);
+            williePawn->Player = false;
+
+            if (m_PrevAIController) {
+                m_PrevAIController->Possess(williePawn);
+                m_PrevAIController->SetActorTickEnabled(true);
+                m_PrevAIController = nullptr;
+            }
+
+            m_PossessedWillie = nullptr;
+            m_Player = static_cast<SDK::AWillie_BP_C*>(m_OriginalPawn);
+            m_OriginalPawn = nullptr;
+            frame.log.Info("Returned to original character");
+        }
     }
 
     void RenderWorldTab(Broadsword::Frame& frame) {
@@ -656,6 +734,11 @@ private:
     size_t m_FrameSubscriptionId = 0;
     size_t m_PlayerSpawnSubscriptionId = 0;
     size_t m_DamageHookId = 0;
+
+    // Possession state
+    SDK::AAIController* m_PrevAIController = nullptr;
+    SDK::APawn* m_OriginalPawn = nullptr;
+    SDK::AWillie_BP_C* m_PossessedWillie = nullptr;
 };
 
 // DLL exports
