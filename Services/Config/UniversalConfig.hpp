@@ -1,14 +1,32 @@
 #pragma once
 
+#include <filesystem>
+
 namespace Broadsword {
 
 /**
- * Universal configuration system
- * To be implemented in Checkpoint 11
+ * UniversalConfig - Stub for config system
+ *
+ * Manages framework and mod configuration.
+ * Will be fully implemented in future checkpoints.
  */
 class UniversalConfig {
 public:
-    // Implementation coming in Checkpoint 11
+    UniversalConfig() = default;
+
+    /**
+     * Save config to file (stub)
+     */
+    bool Save(const std::filesystem::path& path) {
+        return true; // Stub
+    }
+
+    /**
+     * Load config from file (stub)
+     */
+    bool Load(const std::filesystem::path& path) {
+        return true; // Stub
+    }
 };
 
 } // namespace Broadsword

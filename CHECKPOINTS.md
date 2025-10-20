@@ -8,9 +8,9 @@
 
 ## Progress Overview
 
-- **Completed:** 13 / 25
-- **In Progress:** Checkpoint 14
-- **Current Phase:** Framework Integration
+- **Completed:** 14 / 25
+- **In Progress:** Checkpoint 15
+- **Current Phase:** Advanced World Operations
 
 ---
 
@@ -108,9 +108,11 @@
 
 ### Phase 7: Framework Integration
 
-- [ ] **Checkpoint 14: Framework Integration**
-  - Files: `Framework/Core/DllMain.cpp`
+- [x] **Checkpoint 14: Framework Integration**
+  - Files: `Framework/Core/DllMain.cpp`, `ModAPI/Frame.hpp`, `Services/Input/InputContext.hpp`, `Services/Config/UniversalConfig.hpp`
   - Commit: "feat: integrate ModLoader into framework main loop"
+  - Completed: 2025-01-19
+  - Build: Verified Debug build succeeds
 
 ### Phase 8: Advanced World Operations
 
@@ -768,4 +770,4 @@ class QueryEngine {
 ---
 
 **Last Updated:** 2025-01-19
-**Current Checkpoint:** 14 of 25
+**Current Checkpoint:** 15 of 25

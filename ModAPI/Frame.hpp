@@ -6,9 +6,16 @@ namespace Broadsword {
 
 // Forward declarations
 class WorldFacade;
-class UIContext;
 class InputContext;
-class Logger;
+
+namespace Services {
+    class UIContext;
+    class Logger;
+}
+
+// Bring into Broadsword namespace for Frame struct
+using UIContext = Services::UIContext;
+using Logger = Services::Logger;
 
 /**
  * Frame context passed to mods every frame via OnFrameEvent

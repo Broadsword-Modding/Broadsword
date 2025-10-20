@@ -20,6 +20,12 @@
 #include "../UI/AboutWindow.hpp"
 #include "../UI/NotificationManager.hpp"
 #include "../UI/ModMenuUI.hpp"
+#include "ModLoader.hpp"
+#include "../World/WorldFacade.hpp"
+#include "../../Services/EventBus/EventBus.hpp"
+#include "../../Services/EventBus/EventTypes.hpp"
+#include "../../Engine/ProcessEventHook.hpp"
+#include "../../Services/Input/InputContext.hpp"
 #include <nlohmann/json.hpp>
 
 using namespace Broadsword;
@@ -33,6 +39,10 @@ static std::unique_ptr<ConsoleWindow> g_ConsoleWindow = nullptr;
 static std::unique_ptr<SettingsWindow> g_SettingsWindow = nullptr;
 static std::unique_ptr<AboutWindow> g_AboutWindow = nullptr;
 static std::unique_ptr<ModMenuUI> g_ModMenuUI = nullptr;
+static std::unique_ptr<ModLoader> g_ModLoader = nullptr;
+static std::unique_ptr<WorldFacade> g_WorldFacade = nullptr;
+static std::unique_ptr<EventBus> g_EventBus = nullptr;
+static std::unique_ptr<InputContext> g_InputContext = nullptr;
 static bool g_Initialized = false;
 static bool g_ShuttingDown = false;
 static HWND g_Window = nullptr;
@@ -211,6 +221,41 @@ static HRESULT __stdcall hkPresent(IDXGISwapChain* pSwapChain, UINT syncInterval
 
             if (g_LoggerInitialized) LOG_INFO("UI windows created");
 
+            // Initialize ProcessEvent hook
+            if (g_LoggerInitialized) LOG_INFO("Initializing ProcessEvent hook...");
+            ProcessEventHook::Get().Initialize();
+            if (g_LoggerInitialized) LOG_INFO("ProcessEvent hook initialized");
+
+            // Initialize EventBus
+            if (g_LoggerInitialized) LOG_INFO("Initializing EventBus...");
+            g_EventBus = std::make_unique<EventBus>();
+            if (g_LoggerInitialized) LOG_INFO("EventBus created");
+
+            // Initialize WorldFacade
+            if (g_LoggerInitialized) LOG_INFO("Initializing WorldFacade...");
+            g_WorldFacade = std::make_unique<WorldFacade>();
+            if (g_LoggerInitialized) LOG_INFO("WorldFacade created");
+
+            // Initialize InputContext
+            if (g_LoggerInitialized) LOG_INFO("Initializing InputContext...");
+            g_InputContext = std::make_unique<InputContext>();
+            if (g_LoggerInitialized) LOG_INFO("InputContext created");
+
+            // Initialize ModLoader
+            if (g_LoggerInitialized) LOG_INFO("Initializing ModLoader...");
+            g_ModLoader = std::make_unique<ModLoader>();
+            if (g_LoggerInitialized) LOG_INFO("ModLoader created");
+
+            // Discover and load mods
+            if (g_LoggerInitialized) LOG_INFO("Discovering mods in ./Mods directory...");
+            size_t modsDiscovered = g_ModLoader->DiscoverMods("./Mods");
+            if (g_LoggerInitialized) LOG_INFO("Discovered {} mods", modsDiscovered);
+
+            // TODO: Register mods (call OnRegister for each)
+            // For now, we just load the mods but don't register them yet
+            // Full registration will be added once all services are ready
+            if (g_LoggerInitialized) LOG_INFO("Mod loading complete (registration deferred)");
+
             g_Initialized = true;
         }
         else
@@ -249,6 +294,32 @@ static HRESULT __stdcall hkPresent(IDXGISwapChain* pSwapChain, UINT syncInterval
 
         // Process game thread actions
         GameThreadExecutor::Get().ProcessQueue();
+
+        // Update keybindings (poll keyboard state)
+        UIContext::Get().UpdateBindings();
+
+        // Emit OnFrameEvent to mods
+        if (g_EventBus && g_WorldFacade && g_InputContext) {
+            // Calculate delta time (simplified for now)
+            static auto lastFrameTime = std::chrono::high_resolution_clock::now();
+            auto currentTime = std::chrono::high_resolution_clock::now();
+            float deltaTime = std::chrono::duration<float>(currentTime - lastFrameTime).count();
+            lastFrameTime = currentTime;
+
+            // Create Frame context
+            Frame frame{
+                .world = *g_WorldFacade,
+                .ui = UIContext::Get(),
+                .input = *g_InputContext,
+                .log = Logger::Get(),
+                .deltaTime = deltaTime,
+                .frameNumber = g_FrameNumber
+            };
+
+            // Create and emit OnFrameEvent
+            OnFrameEvent frameEvent{frame, deltaTime};
+            g_EventBus->Emit(frameEvent);
+        }
 
         // Start ImGui frame
         ImGui_ImplWin32_NewFrame();
