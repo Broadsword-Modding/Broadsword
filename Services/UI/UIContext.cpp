@@ -295,6 +295,103 @@ bool UIContext::Combo(std::string_view label, int* currentItem, const char* cons
     return comboChanged || modified;
 }
 
+bool UIContext::SliderInt(std::string_view label, int* value, int min, int max, std::source_location loc)
+{
+    using namespace Broadsword;
+
+    // Create binding ID
+    BindingID id = BindingID::FromLocation(m_CurrentModName, label, loc);
+
+    // Register if not already registered
+    if (!m_BindingManager.IsRegistered(id)) {
+        m_BindingManager.Register(id, std::string(label));
+    }
+
+    // Check if bound key was pressed
+    bool keyPressed = m_BindingManager.WasKeyPressed(id);
+    bool modified = false;
+
+    if (keyPressed && value) {
+        // Check if shift is held
+        bool shiftHeld = (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;
+
+        if (shiftHeld) {
+            // Decrement
+            (*value)--;
+            if (*value < min) *value = min;
+        } else {
+            // Increment
+            (*value)++;
+            if (*value > max) *value = max;
+        }
+        modified = true;
+    }
+
+    // Render slider
+    bool sliderChanged = ImGui::SliderInt(std::string(label).c_str(), value, min, max);
+
+    // Show keybinding indicator if bound
+    auto boundKey = m_BindingManager.GetKey(id);
+    if (boundKey.has_value()) {
+        ImGui::SameLine();
+        ImGui::TextDisabled("[VK %d: +/-]", boundKey.value());
+    }
+
+    // Right-click to show binding popup
+    if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
+        ImGui::OpenPopup("BindKeyPopup");
+    }
+
+    // Show binding popup if open
+    if (ImGui::BeginPopup("BindKeyPopup")) {
+        ShowBindingPopup(id);
+        ImGui::EndPopup();
+    }
+
+    // Return true if changed by slider OR key
+    return sliderChanged || modified;
+}
+
+bool UIContext::BeginTabBar(std::string_view id)
+{
+    return ImGui::BeginTabBar(std::string(id).c_str());
+}
+
+bool UIContext::BeginTabItem(std::string_view label)
+{
+    return ImGui::BeginTabItem(std::string(label).c_str());
+}
+
+void UIContext::EndTabItem()
+{
+    ImGui::EndTabItem();
+}
+
+void UIContext::EndTabBar()
+{
+    ImGui::EndTabBar();
+}
+
+void UIContext::Text(std::string_view text)
+{
+    ImGui::Text("%s", std::string(text).c_str());
+}
+
+void UIContext::TextColored(const ImVec4& color, std::string_view text)
+{
+    ImGui::TextColored(color, "%s", std::string(text).c_str());
+}
+
+void UIContext::TextWrapped(std::string_view text)
+{
+    ImGui::TextWrapped("%s", std::string(text).c_str());
+}
+
+void UIContext::Separator()
+{
+    ImGui::Separator();
+}
+
 void UIContext::ShowBindingPopup(const BindingID& id)
 {
     ImGui::Text("Bind key for: %s", id.label.c_str());

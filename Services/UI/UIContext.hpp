@@ -154,6 +154,81 @@ public:
     );
 
     /**
+     * Integer slider with automatic keybinding support
+     *
+     * Bound key increments value by 1.
+     * Shift+bound key decrements value by 1.
+     * Right-click to bind key.
+     *
+     * @param label Slider label
+     * @param value Pointer to int value
+     * @param min Minimum value
+     * @param max Maximum value
+     * @param loc Source location (auto-captured)
+     * @return true if value changed
+     */
+    bool SliderInt(
+        std::string_view label,
+        int* value,
+        int min,
+        int max,
+        std::source_location loc = std::source_location::current()
+    );
+
+    /**
+     * Begin a tab bar
+     *
+     * @param id Tab bar ID
+     * @return true if tab bar is open
+     */
+    bool BeginTabBar(std::string_view id);
+
+    /**
+     * Begin a tab item
+     *
+     * @param label Tab label
+     * @return true if tab is selected
+     */
+    bool BeginTabItem(std::string_view label);
+
+    /**
+     * End a tab item (call after BeginTabItem returns true)
+     */
+    void EndTabItem();
+
+    /**
+     * End a tab bar (call after BeginTabBar)
+     */
+    void EndTabBar();
+
+    /**
+     * Display text
+     *
+     * @param text Text to display
+     */
+    void Text(std::string_view text);
+
+    /**
+     * Display colored text
+     *
+     * @param color Text color (RGBA 0.0-1.0)
+     * @param text Text to display
+     */
+    void TextColored(const ImVec4& color, std::string_view text);
+
+    /**
+     * Display wrapped text that breaks lines automatically
+     *
+     * @param text Text to display
+     */
+    void TextWrapped(std::string_view text);
+
+    /**
+     * Draw a horizontal separator line
+     */
+    void Separator();
+
+    /**
      * Update bindings (called once per frame before UI rendering)
      */
     void UpdateBindings();
