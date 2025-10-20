@@ -19,7 +19,8 @@ Broadsword provides a complete modding API for Half Sword with:
 ### Prerequisites
 
 - Visual Studio 2022 (17.10+) with C++ Desktop Development
-- CMake 3.28+
+- vcpkg - C++ package manager
+- Python 3.7+ - For build automation
 - Half Sword installed
 
 ### Build and Install
@@ -29,12 +30,11 @@ Broadsword provides a complete modding API for Half Sword with:
 git clone https://github.com/Broadsword-Modding/Broadsword.git
 cd Broadsword
 
-# Configure and build (vcpkg auto-installs dependencies)
-cmake -B build -S .
-cmake --build build --config Debug
+# One-time setup
+python broadsword.py setup --vcpkg-root C:\Projects\vcpkg
 
-# Deploy to game
-.\deploy.ps1 -Configuration Debug
+# Build and deploy
+python broadsword.py all
 ```
 
 ### Launch Game
@@ -43,7 +43,7 @@ cmake --build build --config Debug
 2. Press **INSERT** to open Broadsword menu
 3. Mod windows will appear automatically
 
-See [BUILD.md](BUILD.md) for detailed build instructions.
+**See [Build Tool Documentation](docs/BUILD_TOOL.md) for complete build instructions and tool reference.**
 
 ## Creating Mods
 

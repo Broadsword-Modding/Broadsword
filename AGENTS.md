@@ -144,6 +144,71 @@ One thing to watch out for: [potential edge case]. Should we add handling for th
 6. **Violating established patterns**
    - "This differs from how we handle similar cases in [other module]. Should we keep consistency?"
 
+## Building Broadsword
+
+### Build Tool
+
+Broadsword uses `broadsword.py`, a comprehensive Python automation tool for building, deploying, and releasing.
+
+**Quick Build & Deploy:**
+```powershell
+# First time setup
+python broadsword.py setup --vcpkg-root C:\Projects\vcpkg
+
+# Build and deploy
+python broadsword.py all
+```
+
+**Common Commands:**
+```powershell
+# Validate environment
+python broadsword.py validate
+
+# Build only
+python broadsword.py build
+
+# Build Release
+python broadsword.py build --release
+
+# Deploy to game
+python broadsword.py deploy
+
+# Clean rebuild
+python broadsword.py build --clean
+
+# Version management
+python broadsword.py version --patch
+
+# Create release
+python broadsword.py release
+```
+
+See [docs/BUILD_TOOL.md](docs/BUILD_TOOL.md) for complete build instructions and tool documentation.
+
+### Build Requirements
+
+Before committing, verify:
+
+1. **Environment validated**: `python broadsword.py validate` passes
+2. **Build succeeds**: `python broadsword.py build` completes without errors
+3. **No breaking changes**: Existing mods still compile and load
+4. **Test in-game**: Deploy and verify framework initializes
+
+### Build System Architecture
+
+- **CMake 3.28+**: Build configuration
+- **vcpkg manifest mode**: Automatic dependency management (vcpkg.json)
+- **CMakePresets.json**: CMake configuration presets (auto-generated)
+- **broadsword.py**: Build automation (ONLY supported build method)
+
+Dependencies installed automatically:
+- imgui 1.91.9 (DX11/DX12 backends)
+- minhook 1.3.4 (function hooking)
+- nlohmann-json 3.12.0 (JSON serialization)
+- glm 1.0.1 (math library)
+- toml11 4.4.0 (TOML parsing)
+- fmt 12.0.0 (string formatting)
+
 ## Code Style and Quality
 
 ### Absolute Prohibitions
@@ -168,7 +233,7 @@ One thing to watch out for: [potential edge case]. Should we add handling for th
 
 4. **NO BROKEN BUILDS**
    - Every commit must compile successfully
-   - Run `cmake --build build --config Debug` before committing
+   - Run `python broadsword.py build` before committing
    - If build fails, fix it before committing
    - Never commit code that doesn't build
 
@@ -593,7 +658,7 @@ git push
 ## When in Doubt
 
 1. **Read existing code** - Follow established patterns
-2. **Check BUILD.md** - Verify build steps
+2. **Check docs/BUILD_TOOL.md** - Verify build steps
 3. **Test in-game** - Don't assume it works
 4. **Build before commit** - Green commits only
 5. **Keep it simple** - No over-engineering
