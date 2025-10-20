@@ -26,7 +26,7 @@ Broadsword provides a complete modding API for Half Sword with:
 
 ```powershell
 # Clone repository
-git clone https://github.com/yourusername/Broadsword.git
+git clone https://github.com/Broadsword-Modding/Broadsword.git
 cd Broadsword
 
 # Configure and build (vcpkg auto-installs dependencies)

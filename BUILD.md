@@ -16,7 +16,7 @@
 ### 1. Clone the Repository
 
 ```powershell
-git clone https://github.com/yourusername/Broadsword.git
+git clone https://github.com/Broadsword-Modding/Broadsword.git
 cd Broadsword
 ```
 
