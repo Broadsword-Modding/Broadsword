@@ -21,11 +21,14 @@
 #include "../UI/NotificationManager.hpp"
 #include "../UI/ModMenuUI.hpp"
 #include "ModLoader.hpp"
+#include "ModContext.hpp"
 #include "../World/WorldFacade.hpp"
 #include "../../Services/EventBus/EventBus.hpp"
 #include "../../Services/EventBus/EventTypes.hpp"
+#include "../../Services/Config/UniversalConfig.hpp"
 #include "../../Engine/ProcessEventHook.hpp"
 #include "../../Services/Input/InputContext.hpp"
+#include "../../ModAPI/HookContext.hpp"
 #include <nlohmann/json.hpp>
 
 using namespace Broadsword;
@@ -251,10 +254,24 @@ static HRESULT __stdcall hkPresent(IDXGISwapChain* pSwapChain, UINT syncInterval
             size_t modsDiscovered = g_ModLoader->DiscoverMods("./Mods");
             if (g_LoggerInitialized) LOG_INFO("Discovered {} mods", modsDiscovered);
 
-            // TODO: Register mods (call OnRegister for each)
-            // For now, we just load the mods but don't register them yet
-            // Full registration will be added once all services are ready
-            if (g_LoggerInitialized) LOG_INFO("Mod loading complete (registration deferred)");
+            // Register mods now that all services are initialized
+            if (modsDiscovered > 0) {
+                if (g_LoggerInitialized) LOG_INFO("Registering mods...");
+
+                // Create stub UniversalConfig and HookContext for now
+                static UniversalConfig stubConfig;
+                static HookContext stubHooks;
+
+                ModContext modContext{
+                    .events = *g_EventBus,
+                    .config = stubConfig,
+                    .log = Logger::Get(),
+                    .hooks = stubHooks
+                };
+
+                g_ModLoader->RegisterAllMods(modContext);
+                if (g_LoggerInitialized) LOG_INFO("All mods registered successfully");
+            }
 
             g_Initialized = true;
         }

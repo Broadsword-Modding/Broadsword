@@ -78,6 +78,16 @@ public:
      */
     size_t GetModCount() const { return m_LoadedMods.size(); }
 
+    /**
+     * Register all loaded mods
+     *
+     * Calls OnRegister() for each mod with ModContext.
+     * Should be called after all framework services are initialized.
+     *
+     * @param ctx ModContext with references to services
+     */
+    void RegisterAllMods(ModContext& ctx);
+
 private:
     /**
      * Loaded mod tracking

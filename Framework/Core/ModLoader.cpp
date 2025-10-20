@@ -133,4 +133,25 @@ std::vector<Mod*> ModLoader::GetLoadedMods() const {
     return mods;
 }
 
+void ModLoader::RegisterAllMods(ModContext& ctx) {
+    std::cout << "[ModLoader] Registering " << m_LoadedMods.size() << " mods...\n";
+
+    for (auto& loadedMod : m_LoadedMods) {
+        if (loadedMod.modInstance) {
+            try {
+                ModInfo info = loadedMod.modInstance->GetInfo();
+                std::cout << "[ModLoader] Registering mod: " << info.Name << "\n";
+                loadedMod.modInstance->OnRegister(ctx);
+                std::cout << "[ModLoader] Successfully registered: " << info.Name << "\n";
+            } catch (const std::exception& e) {
+                std::cerr << "[ModLoader] Exception in OnRegister: " << e.what() << "\n";
+            } catch (...) {
+                std::cerr << "[ModLoader] Unknown exception in OnRegister\n";
+            }
+        }
+    }
+
+    std::cout << "[ModLoader] All mods registered\n";
+}
+
 } // namespace Broadsword
