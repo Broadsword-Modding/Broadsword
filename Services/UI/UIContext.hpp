@@ -91,6 +91,69 @@ public:
     );
 
     /**
+     * Checkbox with automatic keybinding support
+     *
+     * Toggles value when clicked OR bound key pressed.
+     * Right-click to bind key.
+     *
+     * @param label Checkbox label
+     * @param value Pointer to bool value
+     * @param loc Source location (auto-captured)
+     * @return true if value changed
+     */
+    bool Checkbox(
+        std::string_view label,
+        bool* value,
+        std::source_location loc = std::source_location::current()
+    );
+
+    /**
+     * Slider with automatic keybinding support
+     *
+     * Bound key increments value by step amount.
+     * Shift+bound key decrements value.
+     * Right-click to bind key.
+     *
+     * @param label Slider label
+     * @param value Pointer to float value
+     * @param min Minimum value
+     * @param max Maximum value
+     * @param step Step amount for key increment (default: (max-min)/10)
+     * @param loc Source location (auto-captured)
+     * @return true if value changed
+     */
+    bool SliderFloat(
+        std::string_view label,
+        float* value,
+        float min,
+        float max,
+        float step = 0.0f,
+        std::source_location loc = std::source_location::current()
+    );
+
+    /**
+     * Combo box with automatic keybinding support
+     *
+     * Bound key cycles to next item.
+     * Shift+bound key cycles to previous item.
+     * Right-click to bind key.
+     *
+     * @param label Combo label
+     * @param currentItem Pointer to current item index
+     * @param items Array of item labels
+     * @param itemCount Number of items
+     * @param loc Source location (auto-captured)
+     * @return true if selection changed
+     */
+    bool Combo(
+        std::string_view label,
+        int* currentItem,
+        const char* const items[],
+        int itemCount,
+        std::source_location loc = std::source_location::current()
+    );
+
+    /**
      * Update bindings (called once per frame before UI rendering)
      */
     void UpdateBindings();

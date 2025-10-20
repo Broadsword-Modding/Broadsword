@@ -74,6 +74,12 @@ add_library(Broadsword SHARED
     # Framework - World
     Framework/World/WorldFacade.cpp
 
+    # Engine - ProcessEvent Hook
+    Engine/ProcessEventHook.cpp
+
+    # ModAPI - Hook Context
+    ModAPI/HookContext.cpp
+
     # Engine - SDK
     Engine/SDK/SDKPch.cpp
     Engine/SDK/SDK/Basic.cpp

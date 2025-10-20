@@ -8,9 +8,9 @@
 
 ## Progress Overview
 
-- **Completed:** 8 / 25
-- **In Progress:** Checkpoint 9
-- **Current Phase:** Universal Keybinding
+- **Completed:** 13 / 25
+- **In Progress:** Checkpoint 14
+- **Current Phase:** Framework Integration
 
 ---
 
@@ -72,29 +72,39 @@
   - Completed: 2025-01-19
   - Build: Verified Debug build succeeds
 
-- [ ] **Checkpoint 9: Universal Keybinding - Part 3 (More Widgets)**
-  - Files: `Services/UI/UIContext.cpp`
+- [x] **Checkpoint 9: Universal Keybinding - Part 3 (More Widgets)**
+  - Files: `Services/UI/UIContext.hpp`, `Services/UI/UIContext.cpp`
   - Commit: "feat: extend universal keybinding to Checkbox, Slider, Combo"
+  - Completed: 2025-01-19
+  - Build: Verified Debug build succeeds
 
 ### Phase 5: C++26 Config Reflection
 
-- [ ] **Checkpoint 10: C++26 Config Reflection - Part 1 (Attribute)**
+- [x] **Checkpoint 10: C++26 Config Reflection - Part 1 (Attribute)**
   - Files: `Services/Config/Reflection.hpp`, `ModAPI/Config.hpp`
   - Commit: "feat: add [[configurable]] attribute for C++26 reflection"
+  - Completed: 2025-01-19
+  - Build: Verified Debug build succeeds
 
-- [ ] **Checkpoint 11: C++26 Config Reflection - Part 2 (Serialization)**
-  - Files: `Services/Config/ConfigManager.hpp`, `Services/Config/ConfigManager.cpp`
+- [x] **Checkpoint 11: C++26 Config Reflection - Part 2 (Serialization)**
+  - Files: `Services/Config/ConfigManager.hpp`
   - Commit: "feat: add reflection-based config serialization"
+  - Completed: 2025-01-19
+  - Build: Verified Debug build succeeds
 
 ### Phase 6: ProcessEvent Hooking
 
-- [ ] **Checkpoint 12: ProcessEvent Hook - Part 1 (Hook Infrastructure)**
-  - Files: `Engine/ProcessEventHook.hpp`, `Engine/ProcessEventHook.cpp`
+- [x] **Checkpoint 12: ProcessEvent Hook - Part 1 (Hook Infrastructure)**
+  - Files: `Engine/ProcessEventHook.hpp`, `Engine/ProcessEventHook.cpp`, `CMakeLists.txt`
   - Commit: "feat: add ProcessEvent hooking infrastructure"
+  - Completed: 2025-01-19
+  - Build: Verified Debug build succeeds
 
-- [ ] **Checkpoint 13: ProcessEvent Hook - Part 2 (Mod API)**
-  - Files: `ModAPI/Hooks.hpp`
+- [x] **Checkpoint 13: ProcessEvent Hook - Part 2 (Mod API)**
+  - Files: `ModAPI/HookContext.hpp`, `ModAPI/HookContext.cpp`, `CMakeLists.txt`
   - Commit: "feat: add ProcessEvent hook API to ModContext"
+  - Completed: 2025-01-19
+  - Build: Verified Debug build succeeds
 
 ### Phase 7: Framework Integration
 
@@ -758,4 +768,4 @@ class QueryEngine {
 ---
 
 **Last Updated:** 2025-01-19
-**Current Checkpoint:** 9 of 25
+**Current Checkpoint:** 14 of 25

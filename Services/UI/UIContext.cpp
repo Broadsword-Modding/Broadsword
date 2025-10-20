@@ -133,6 +133,168 @@ bool UIContext::Button(std::string_view label, std::source_location loc)
     return clicked || keyPressed;
 }
 
+bool UIContext::Checkbox(std::string_view label, bool* value, std::source_location loc)
+{
+    using namespace Broadsword;
+
+    // Create binding ID
+    BindingID id = BindingID::FromLocation(m_CurrentModName, label, loc);
+
+    // Register if not already registered
+    if (!m_BindingManager.IsRegistered(id)) {
+        m_BindingManager.Register(id, std::string(label));
+    }
+
+    // Check if bound key was pressed
+    bool keyPressed = m_BindingManager.WasKeyPressed(id);
+    if (keyPressed && value) {
+        *value = !(*value); // Toggle
+    }
+
+    // Render checkbox
+    bool clicked = ImGui::Checkbox(std::string(label).c_str(), value);
+
+    // Show keybinding indicator if bound
+    auto boundKey = m_BindingManager.GetKey(id);
+    if (boundKey.has_value()) {
+        ImGui::SameLine();
+        ImGui::TextDisabled("[VK %d]", boundKey.value());
+    }
+
+    // Right-click to show binding popup
+    if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
+        ImGui::OpenPopup("BindKeyPopup");
+    }
+
+    // Show binding popup if open
+    if (ImGui::BeginPopup("BindKeyPopup")) {
+        ShowBindingPopup(id);
+        ImGui::EndPopup();
+    }
+
+    // Return true if clicked OR key pressed
+    return clicked || keyPressed;
+}
+
+bool UIContext::SliderFloat(std::string_view label, float* value, float min, float max, float step, std::source_location loc)
+{
+    using namespace Broadsword;
+
+    // Default step if not provided
+    if (step == 0.0f) {
+        step = (max - min) / 10.0f;
+    }
+
+    // Create binding ID
+    BindingID id = BindingID::FromLocation(m_CurrentModName, label, loc);
+
+    // Register if not already registered
+    if (!m_BindingManager.IsRegistered(id)) {
+        m_BindingManager.Register(id, std::string(label));
+    }
+
+    // Check if bound key was pressed
+    bool keyPressed = m_BindingManager.WasKeyPressed(id);
+    bool modified = false;
+
+    if (keyPressed && value) {
+        // Check if shift is held
+        bool shiftHeld = (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;
+
+        if (shiftHeld) {
+            // Decrement
+            *value -= step;
+            if (*value < min) *value = min;
+        } else {
+            // Increment
+            *value += step;
+            if (*value > max) *value = max;
+        }
+        modified = true;
+    }
+
+    // Render slider
+    bool sliderChanged = ImGui::SliderFloat(std::string(label).c_str(), value, min, max);
+
+    // Show keybinding indicator if bound
+    auto boundKey = m_BindingManager.GetKey(id);
+    if (boundKey.has_value()) {
+        ImGui::SameLine();
+        ImGui::TextDisabled("[VK %d: +/-]", boundKey.value());
+    }
+
+    // Right-click to show binding popup
+    if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
+        ImGui::OpenPopup("BindKeyPopup");
+    }
+
+    // Show binding popup if open
+    if (ImGui::BeginPopup("BindKeyPopup")) {
+        ShowBindingPopup(id);
+        ImGui::EndPopup();
+    }
+
+    // Return true if changed by slider OR key
+    return sliderChanged || modified;
+}
+
+bool UIContext::Combo(std::string_view label, int* currentItem, const char* const items[], int itemCount, std::source_location loc)
+{
+    using namespace Broadsword;
+
+    // Create binding ID
+    BindingID id = BindingID::FromLocation(m_CurrentModName, label, loc);
+
+    // Register if not already registered
+    if (!m_BindingManager.IsRegistered(id)) {
+        m_BindingManager.Register(id, std::string(label));
+    }
+
+    // Check if bound key was pressed
+    bool keyPressed = m_BindingManager.WasKeyPressed(id);
+    bool modified = false;
+
+    if (keyPressed && currentItem) {
+        // Check if shift is held
+        bool shiftHeld = (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;
+
+        if (shiftHeld) {
+            // Previous item
+            (*currentItem)--;
+            if (*currentItem < 0) *currentItem = itemCount - 1;
+        } else {
+            // Next item
+            (*currentItem)++;
+            if (*currentItem >= itemCount) *currentItem = 0;
+        }
+        modified = true;
+    }
+
+    // Render combo
+    bool comboChanged = ImGui::Combo(std::string(label).c_str(), currentItem, items, itemCount);
+
+    // Show keybinding indicator if bound
+    auto boundKey = m_BindingManager.GetKey(id);
+    if (boundKey.has_value()) {
+        ImGui::SameLine();
+        ImGui::TextDisabled("[VK %d: cycle]", boundKey.value());
+    }
+
+    // Right-click to show binding popup
+    if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
+        ImGui::OpenPopup("BindKeyPopup");
+    }
+
+    // Show binding popup if open
+    if (ImGui::BeginPopup("BindKeyPopup")) {
+        ShowBindingPopup(id);
+        ImGui::EndPopup();
+    }
+
+    // Return true if changed by combo OR key
+    return comboChanged || modified;
+}
+
 void UIContext::ShowBindingPopup(const BindingID& id)
 {
     ImGui::Text("Bind key for: %s", id.label.c_str());
@@ -155,8 +317,8 @@ void UIContext::ShowBindingPopup(const BindingID& id)
 
     // Check for key press
     for (int vk = 0x08; vk <= 0xFE; vk++) {
-        // Skip mouse buttons and reserved keys
-        if (vk >= VK_LBUTTON && vk <= VK_XBUTTON2) continue;
+        // Skip M1 (left) and M2 (right) mouse buttons, but allow others
+        if (vk == VK_LBUTTON || vk == VK_RBUTTON) continue;
         if (vk == 0x0A || vk == 0x0B) continue; // Reserved
         if (vk >= 0x0E && vk <= 0x0F) continue; // Undefined
         if (vk >= 0x16 && vk <= 0x19) continue; // IME keys
