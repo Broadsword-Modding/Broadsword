@@ -7,96 +7,156 @@
    - Windows 10/11 SDK
    - CMake tools
 
-2. **vcpkg** installed and integrated
-   - Install location: Can be anywhere, but you'll need the path
+2. **Git** - For cloning the repository
 
-3. **Half Sword (Demo)** installed
+3. **Half Sword** - The game must be installed
 
-## Build Steps
+## Quick Start
 
-### 1. Configure vcpkg Toolchain
+### 1. Clone the Repository
 
-Set the vcpkg toolchain file path. Either:
-
-**Option A: Environment Variable**
 ```powershell
-$env:VCPKG_ROOT = "C:\path\to\vcpkg"
+git clone https://github.com/yourusername/Broadsword.git
+cd Broadsword
 ```
 
-**Option B: CMake Command Line** (shown below)
+### 2. Configure and Build
 
-### 2. Configure CMake
-
-From the `Broadsword/` directory:
+Broadsword uses vcpkg in manifest mode - dependencies are automatically installed during CMake configuration.
 
 ```powershell
-cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE="C:/path/to/vcpkg/scripts/buildsystems/vcpkg.cmake"
-```
+# Configure (vcpkg will auto-install dependencies)
+cmake -B build -S .
 
-Or if using the workspace vcpkg:
-```powershell
-cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE="../Half-Sword-Framework/vcpkg/scripts/buildsystems/vcpkg.cmake"
-```
-
-### 3. Build
-
-**Debug Build:**
-```powershell
+# Build Debug
 cmake --build build --config Debug
-```
 
-**Release Build:**
-```powershell
+# Build Release
 cmake --build build --config Release
 ```
 
-### 4. Output Location
+### 3. Output Location
 
-Built DLLs will be in:
+Built files will be in:
 - `build/bin/Debug/` or `build/bin/Release/`
 
 You should see:
 - `Broadsword.dll` - Main framework
-- `dwmapi.dll` - Proxy DLL
+- `dwmapi.dll` - Proxy DLL (DLL hijacking loader)
+- `Mods/` - Directory containing mod DLLs
 
 ## Installing to Half Sword
 
-### Find Half Sword Directory
+### Using the Deploy Script
 
-Half Sword Demo is typically installed at:
-```
-C:\Program Files (x86)\Steam\steamapps\common\Half Sword Demo\HalfSwordUE5\Binaries\Win64\
-```
-
-### Copy Files
-
-Copy both DLLs to the game directory:
+The easiest way to install is using the included PowerShell script:
 
 ```powershell
-# Set game path
-$gamePath = "C:\Program Files (x86)\Steam\steamapps\common\Half Sword Demo\HalfSwordUE5\Binaries\Win64"
+# Deploy Debug build
+.\deploy.ps1 -Configuration Debug
 
-# Copy Debug build
-Copy-Item build/bin/Debug/dwmapi.dll "$gamePath\"
-Copy-Item build/bin/Debug/Broadsword.dll "$gamePath\"
-
-# Or Release build
-Copy-Item build/bin/Release/dwmapi.dll "$gamePath\"
-Copy-Item build/bin/Release/Broadsword.dll "$gamePath\"
+# Deploy Release build
+.\deploy.ps1 -Configuration Release
 ```
+
+The script will automatically:
+1. Detect your Half Sword installation
+2. Copy framework DLLs
+3. Copy mod DLLs
+4. Create Mods directory if needed
+
+### Manual Installation
+
+If you prefer manual installation:
+
+1. Find your Half Sword directory (usually):
+   ```
+   C:\Program Files (x86)\Steam\steamapps\common\Half Sword Demo\HalfSwordUE5\Binaries\Win64\
+   ```
+
+2. Copy files:
+   ```powershell
+   $game = "C:\Program Files (x86)\Steam\steamapps\common\Half Sword Demo\HalfSwordUE5\Binaries\Win64"
+
+   # Copy framework DLLs
+   Copy-Item build/bin/Debug/dwmapi.dll "$game\"
+   Copy-Item build/bin/Debug/Broadsword.dll "$game\"
+
+   # Copy mods
+   Copy-Item -Recurse build/bin/Debug/Mods "$game\" -Force
+   ```
 
 ## Testing
 
 1. Launch Half Sword
-2. You should see an ImGui window titled "Broadsword Framework - Phase 1"
-3. The window shows:
-   - Framework status
-   - Detected backend (DX11 or DX12)
-   - Current FPS
-   - "Phase 1 Complete!" message
+2. Press **INSERT** to open the Broadsword menu
+3. You should see:
+   - Framework information
+   - Loaded mods list
+   - Mod UI windows
 
-4. Check the log file in the game directory:
-   - `Broadsword_Phase1.log`
+4. Check log files in game directory:
+   - `Broadsword_YYYY-MM-DD_HH-MM-SS.log`
+
+## Building Mods
+
+### Structure
+
+Mods are located in `Mods/` directory. Example: `Mods/Enhancer/`
+
+Each mod needs:
+- `CMakeLists.txt` - Build configuration
+- `ModName.hpp` - Mod class header
+- `ModName.cpp` - Mod implementation
+
+### Creating a New Mod
+
+1. Create mod directory:
+   ```powershell
+   mkdir Mods/MyMod
+   ```
+
+2. Create `CMakeLists.txt`:
+   ```cmake
+   project(MyMod)
+
+   set(SOURCES
+       MyMod.cpp
+       MyMod.hpp
+   )
+
+   find_package(nlohmann_json CONFIG REQUIRED)
+
+   add_library(${PROJECT_NAME} SHARED ${SOURCES})
+
+   target_include_directories(${PROJECT_NAME} PRIVATE
+       ${CMAKE_SOURCE_DIR}/ModAPI
+       ${CMAKE_SOURCE_DIR}/Engine/SDK
+       ${CMAKE_SOURCE_DIR}/Services
+       ${CMAKE_SOURCE_DIR}/Framework
+   )
+
+   target_link_libraries(${PROJECT_NAME} PRIVATE
+       nlohmann_json::nlohmann_json
+   )
+
+   set_target_properties(${PROJECT_NAME} PROPERTIES
+       RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/$<CONFIG>/Mods"
+   )
+   ```
+
+3. Add to root `CMakeLists.txt`:
+   ```cmake
+   add_subdirectory(Mods/MyMod)
+   ```
+
+4. Implement mod (see `Mods/Enhancer/` for example)
+
+5. Build and deploy:
+   ```powershell
+   cmake --build build --config Debug
+   .\deploy.ps1 -Configuration Debug
+   ```
 
 ## Troubleshooting
 
@@ -107,55 +167,116 @@ Copy-Item build/bin/Release/Broadsword.dll "$gamePath\"
 
 ### Framework doesn't initialize
 
-- Check `Broadsword_Phase1.log` in the game directory
-- Look for error messages about kiero initialization or hook failures
+- Check log file in game directory
+- Look for error messages about DLL loading or hook failures
+- Ensure you're using the correct architecture (x64)
 
-### No ImGui window appears
+### No menu appears when pressing INSERT
 
-- The framework may have initialized but ImGui rendering failed
-- Check the log file for backend initialization errors
-- Try switching between DX11 and DX12 mode in game settings (if available)
+- Check logs for UI initialization errors
+- Try switching between DX11 and DX12 in game settings
+- Verify ImGui backend initialized correctly
 
-### Build errors about missing headers
+### vcpkg dependencies fail to install
 
-- Ensure vcpkg installed all dependencies successfully
-- Try: `vcpkg install imgui[dx11-binding,dx12-binding,win32-binding] minhook nlohmann-json glm toml11 --triplet x64-windows`
+- Ensure you have internet connection (first build downloads packages)
+- Check vcpkg cache: `build/vcpkg_installed/`
+- Try clean build: `rm -r build; cmake -B build -S .`
 
-### CMake can't find packages
+### CMake configuration fails
 
-- Verify vcpkg toolchain file path is correct
-- Ensure vcpkg integration: `vcpkg integrate install`
+- Verify Visual Studio 2022 is installed with C++ tools
+- Ensure CMake 3.28+ is installed
+- Check `vcpkg.json` is present in root directory
+
+### Mods don't load
+
+- Check `Mods/` directory exists in game folder
+- Verify mod DLLs are x64 architecture
+- Check logs for mod loading errors
+- Ensure mod exports `CreateMod()` and `DestroyMod()` functions
 
 ## Development Workflow
 
-### Quick Rebuild and Deploy
+### Quick Rebuild
 
 ```powershell
-# Build
-cmake --build build --config Debug
-
-# Deploy
-$game = "C:\Program Files (x86)\Steam\steamapps\common\Half Sword Demo\HalfSwordUE5\Binaries\Win64"
-Copy-Item build/bin/Debug/*.dll "$game\"
-
-# Launch game and test
+# Rebuild and deploy in one command
+cmake --build build --config Debug && .\deploy.ps1 -Configuration Debug
 ```
 
 ### Clean Build
 
 ```powershell
-# Remove build directory
+# Remove build artifacts
 Remove-Item -Recurse -Force build
 
 # Reconfigure and build
-cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE="path/to/vcpkg/toolchain"
+cmake -B build -S .
 cmake --build build --config Debug
 ```
 
-## Next Steps After Phase 1
+### Debugging
 
-Once Phase 1 is working (ImGui window appears), we can proceed to:
-- **Phase 2**: Services layer (EventBus, Logger, Config, Input, UI)
-- **Phase 3**: Engine integration (SDK, ProcessEvent hooks, World tracking)
-- **Phase 4**: Mod API and mod loader
-- **Phase 5**: Example mods and polish
+1. Build in Debug configuration
+2. Launch Half Sword
+3. Visual Studio → Debug → Attach to Process
+4. Select `HalfSwordUE5-Win64-Shipping.exe`
+5. Set breakpoints and debug
+
+## Dependencies
+
+Managed automatically via vcpkg manifest (`vcpkg.json`):
+- **imgui** - UI rendering (with DX11/DX12 backends)
+- **minhook** - Function hooking
+- **nlohmann-json** - JSON serialization
+- **glm** - Math library
+- **toml11** - TOML config parsing
+- **fmt** - String formatting
+
+Dependencies are installed to `build/vcpkg_installed/` on first CMake configuration.
+
+## Architecture
+
+```
+Broadsword/
+├── Foundation/          # Low-level utilities (hooks, memory)
+├── Engine/              # UE5 integration (SDK, ProcessEvent)
+├── Services/            # Core services (UI, logging, events)
+├── Framework/           # Framework core (ModLoader, main loop)
+├── ModAPI/              # Public mod interface
+├── Proxy/               # DLL hijacking proxy
+├── Mods/                # Example mods
+│   └── Enhancer/        # Comprehensive example mod
+└── build/               # Build output (generated)
+```
+
+## Advanced Configuration
+
+### Custom vcpkg Installation
+
+If you have a global vcpkg installation:
+
+```powershell
+cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE="C:/path/to/vcpkg/scripts/buildsystems/vcpkg.cmake"
+```
+
+### Build Options
+
+```powershell
+# Verbose build output
+cmake --build build --config Debug --verbose
+
+# Parallel build (faster)
+cmake --build build --config Debug --parallel 8
+
+# Build specific target
+cmake --build build --config Debug --target Broadsword
+cmake --build build --config Debug --target Enhancer
+```
+
+## Next Steps
+
+- See `docs/CREATING_MODS.md` for mod development guide
+- Check `Mods/Enhancer/` for a complete mod example
+- Join the community for support and mod sharing
