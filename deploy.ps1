@@ -172,7 +172,42 @@ $FrameworkDest = Join-Path $GamePath "Broadsword.dll"
 $proxySuccess = Deploy-File -SourcePath $ProxyDll -DestPath $ProxyDest -DisplayName "dwmapi.dll" -DoBackup $BackupExisting
 $frameworkSuccess = Deploy-File -SourcePath $FrameworkDll -DestPath $FrameworkDest -DisplayName "Broadsword.dll" -DoBackup $BackupExisting
 
+# Deploy Mods folder
+Write-Host ""
+Write-Host "Deploying Mods..." -ForegroundColor Green
+Write-Host ""
+
+$ModsSourceDir = Join-Path $BinDir "Mods"
+$ModsDestDir = Join-Path $GamePath "Mods"
+
+if (Test-Path $ModsSourceDir) {
+    # Create Mods directory if it doesn't exist
+    if (-not (Test-Path $ModsDestDir)) {
+        New-Item -ItemType Directory -Path $ModsDestDir -Force | Out-Null
+        Write-Host "  [CREATE]  Mods directory" -ForegroundColor Green
+    }
+
+    # Deploy each mod DLL
+    $modDlls = Get-ChildItem -Path $ModsSourceDir -Filter "*.dll"
+    foreach ($modDll in $modDlls) {
+        $modDest = Join-Path $ModsDestDir $modDll.Name
+        Deploy-File -SourcePath $modDll.FullName -DestPath $modDest -DisplayName $modDll.Name -DoBackup $BackupExisting | Out-Null
+    }
+
+    if ($modDlls.Count -eq 0) {
+        Write-Host "  [INFO]    No mod DLLs found" -ForegroundColor DarkYellow
+    } else {
+        Write-Host "  Deployed $($modDlls.Count) mod(s)" -ForegroundColor Cyan
+    }
+} else {
+    Write-Host "  [WARN]    Mods directory not found: $ModsSourceDir" -ForegroundColor Yellow
+}
+
 # Deploy vcpkg runtime dependencies
+Write-Host ""
+Write-Host "Deploying Dependencies..." -ForegroundColor Green
+Write-Host ""
+
 $VcpkgBinDir = Join-Path $ScriptDir "build\vcpkg_installed\x64-windows\debug\bin"
 
 # MinHook DLL
@@ -208,9 +243,22 @@ if (-not ($proxySuccess -and $frameworkSuccess -and $minHookSuccess -and $fmtSuc
 }
 
 Write-Host ""
-Write-Host "Deployment complete!" -ForegroundColor Green
+Write-Host "========================================" -ForegroundColor Green
+Write-Host "Deployment Complete!" -ForegroundColor Green
+Write-Host "========================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "Installed to: $GamePath" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "Framework Files:" -ForegroundColor White
+Write-Host "  dwmapi.dll (Proxy Loader)" -ForegroundColor DarkGray
+Write-Host "  Broadsword.dll (Framework Core)" -ForegroundColor DarkGray
+if ($modDlls.Count -gt 0) {
+    Write-Host ""
+    Write-Host "Mods Installed ($($modDlls.Count)):" -ForegroundColor White
+    foreach ($modDll in $modDlls) {
+        Write-Host "  Mods\$($modDll.Name)" -ForegroundColor DarkGray
+    }
+}
 Write-Host ""
 Write-Host "You can now launch Half Sword to test Broadsword Framework." -ForegroundColor White
 Write-Host ""
@@ -218,5 +266,5 @@ Write-Host "Expected log file:" -ForegroundColor Gray
 Write-Host "  $GamePath\Broadsword_YYYYMMDD_HHMMSS.log" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "Expected ImGui window:" -ForegroundColor Gray
-Write-Host "  Broadsword Framework" -ForegroundColor DarkGray
+Write-Host "  Broadsword Framework (with mod tabs)" -ForegroundColor DarkGray
 Write-Host ""
