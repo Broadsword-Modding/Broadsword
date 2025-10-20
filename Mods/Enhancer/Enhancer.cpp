@@ -1,5 +1,8 @@
 #include "../../ModAPI/Broadsword.hpp"
 #include "../../Engine/SDK/Generated/SDK.hpp"
+#include "../../Engine/SDK/Generated/SDK/Arena_Cutting_Map_classes.hpp"
+#include "../../Engine/SDK/Generated/SDK/ModularWeaponBP_classes.hpp"
+#include "../../Engine/SDK/Generated/SDK/BP_Armor_Master_classes.hpp"
 
 using namespace Broadsword;
 
@@ -350,8 +353,166 @@ private:
         frame.ui.Text("World Modifications");
         frame.ui.Separator();
 
-        // Placeholder for world features
-        frame.ui.Text("World features coming soon...");
+        auto worldResult = frame.world.GetWorld();
+        if (!worldResult) {
+            frame.ui.TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "World not loaded");
+            return;
+        }
+        SDK::UWorld* world = worldResult.Value();
+
+        // Slow Motion
+        frame.ui.SliderFloat("Slow Motion Speed", &m_SlowMotionSpeed, 0.01f, 0.99f);
+        if (frame.ui.Button("Toggle Slow Motion")) {
+            auto* settings = world->K2_GetWorldSettings();
+            if (settings) {
+                float current = settings->TimeDilation;
+                settings->TimeDilation = (current == GameConstants::DEFAULT_TIME_DILATION)
+                    ? m_SlowMotionSpeed
+                    : GameConstants::DEFAULT_TIME_DILATION;
+                frame.log.Info("Time dilation set to {}", settings->TimeDilation);
+            }
+        }
+
+        frame.ui.Separator();
+
+        // Custom Gravity
+        frame.ui.SliderFloat("Custom Gravity", &m_CustomGravity, -3000.0f, 3000.0f);
+        if (frame.ui.Button("Toggle Custom Gravity")) {
+            auto* settings = world->K2_GetWorldSettings();
+            if (settings) {
+                settings->bWorldGravitySet = true;
+                float current = settings->WorldGravityZ;
+                settings->WorldGravityZ = (current == GameConstants::DEFAULT_GRAVITY)
+                    ? m_CustomGravity
+                    : GameConstants::DEFAULT_GRAVITY;
+                frame.log.Info("Gravity set to {}", settings->WorldGravityZ);
+            }
+        }
+
+        frame.ui.Separator();
+
+        // Kill All Enemies
+        frame.ui.SliderFloat("Kill Radius", &m_KillRadius, 50.0f, 5000.0f);
+        frame.ui.Checkbox("Snap Neck", &m_SnapNeck);
+        if (frame.ui.Button("Kill All Enemies")) {
+            int killCount = 0;
+            ForEachWillieInRadius(world, m_Player, m_KillRadius, [&](SDK::AWillie_BP_C* willie) {
+                if (m_SnapNeck) {
+                    willie->Snap_Neck();
+                } else {
+                    willie->Death();
+                }
+                killCount++;
+            });
+            frame.log.Info("Killed {} enemies within {} units", killCount, m_KillRadius);
+        }
+
+        frame.ui.Separator();
+
+        // Toggle Enemy AI
+        frame.ui.SliderFloat("AI Toggle Radius", &m_ToggleAIRadius, 50.0f, 5000.0f);
+        if (frame.ui.Button("Toggle Enemy AI")) {
+            bool newTickEnabled = false;
+            bool computed = false;
+            int affectedCount = 0;
+
+            ForEachWillieInRadius(world, m_Player, m_ToggleAIRadius, [&](SDK::AWillie_BP_C* willie) {
+                auto* controller = static_cast<SDK::AAIController*>(willie->GetController());
+                if (controller) {
+                    if (!computed) {
+                        newTickEnabled = !controller->IsActorTickEnabled();
+                        computed = true;
+                    }
+                    controller->SetActorTickEnabled(newTickEnabled);
+                    affectedCount++;
+                }
+            });
+            frame.log.Info("Toggled AI for {} enemies (enabled: {})", affectedCount, newTickEnabled);
+        }
+
+        frame.ui.Separator();
+
+        // Destroy All Willies
+        frame.ui.Checkbox("Destroy Dead Only", &m_DestroyDeadOnly);
+        frame.ui.Checkbox("Disintegrate Effect", &m_DestroyDisintegrate);
+        if (frame.ui.Button("Destroy All Willies")) {
+            int destroyCount = 0;
+            ForEachWillie(world, m_Player, [&](SDK::AWillie_BP_C* willie) {
+                if (!m_DestroyDeadOnly || willie->Health <= GameConstants::MIN_HEALTH) {
+                    if (m_DestroyDisintegrate) {
+                        willie->Disintegrate_and_drop_armor(true);
+                    } else {
+                        willie->K2_DestroyActor();
+                    }
+                    destroyCount++;
+                }
+            });
+            frame.log.Info("Destroyed {} NPCs", destroyCount);
+        }
+
+        frame.ui.Separator();
+
+        // Clear Blood
+        frame.ui.SliderFloat("Blood Clear Amount", &m_ClearBloodAmount, 0.0f, 1.0f);
+        if (frame.ui.Button("Clear Blood")) {
+            if (world->PersistentLevel && world->PersistentLevel->LevelScriptActor) {
+                auto* arenaScript = static_cast<SDK::AArena_Cutting_Map_C*>(world->PersistentLevel->LevelScriptActor);
+                if (arenaScript) {
+                    arenaScript->Clean_Blood(m_ClearBloodAmount);
+                    frame.log.Info("Cleared blood (amount: {})", m_ClearBloodAmount);
+                } else {
+                    frame.log.Warn("Not in arena - cannot clear blood");
+                }
+            }
+        }
+
+        frame.ui.Separator();
+
+        // Clear Objects
+        frame.ui.SliderFloat("Clear Objects Radius", &m_ClearObjectsRadius, 50.0f, 5000.0f);
+        if (frame.ui.Button("Clear Objects")) {
+            constexpr float MIN_DISTANCE_FROM_WILLIES = 100.0f;
+            int clearedCount = 0;
+
+            auto clearObjectsOfType = [&](SDK::UClass* objectClass) {
+                SDK::TArray<SDK::AActor*> objects;
+                SDK::UGameplayStatics::GetAllActorsOfClass(world, objectClass, &objects);
+
+                for (auto* object : objects) {
+                    bool isWithinRadius = false;
+                    bool isFarFromAll = true;
+
+                    ForEachWillie(world, nullptr, [&](SDK::AWillie_BP_C* willie) {
+                        float distance = willie->GetDistanceTo(object);
+                        if (m_Player && m_Player->GetDistanceTo(object) <= m_ClearObjectsRadius) {
+                            isWithinRadius = true;
+                        }
+                        if (distance <= MIN_DISTANCE_FROM_WILLIES) {
+                            isFarFromAll = false;
+                        }
+                    });
+
+                    if (isWithinRadius && isFarFromAll) {
+                        object->K2_DestroyActor();
+                        clearedCount++;
+                    }
+                }
+            };
+
+            clearObjectsOfType(SDK::AModularWeaponBP_C::StaticClass());
+            clearObjectsOfType(SDK::ABP_Armor_Master_C::StaticClass());
+
+            frame.log.Info("Cleared {} objects within {} units", clearedCount, m_ClearObjectsRadius);
+        }
+
+        frame.ui.Separator();
+
+        // Toggle Game Paused
+        if (frame.ui.Button("Toggle Game Paused")) {
+            bool isPaused = SDK::UGameplayStatics::IsGamePaused(world);
+            SDK::UGameplayStatics::SetGamePaused(world, !isPaused);
+            frame.log.Info("Game paused: {}", !isPaused);
+        }
     }
 
     void RenderNPCSpawnerTab(Broadsword::Frame& frame) {
