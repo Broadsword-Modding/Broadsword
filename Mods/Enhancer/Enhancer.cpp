@@ -605,8 +605,50 @@ private:
         frame.ui.Text("Item Spawner");
         frame.ui.Separator();
 
-        // Placeholder for item spawner
-        frame.ui.Text("Item spawner coming soon...");
+        auto worldResult = frame.world.GetWorld();
+        if (!worldResult) {
+            frame.ui.TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "World not loaded");
+            return;
+        }
+        SDK::UWorld* world = worldResult.Value();
+
+        // Define item database (simplified - showing structure, full list would be very long)
+        struct ItemInfo {
+            const char* name;
+            const char* path;
+        };
+
+        static const char* categories[] = {
+            "Weapons", "Helmets", "Body Armor", "Arms", "Legs",
+            "Hands", "Feet", "Neck", "Shoulders", "Waist", "Props"
+        };
+
+        static const char* weaponSubcategories[] = {
+            "Swords", "Maces", "Axes", "Polearms", "Daggers", "Tools", "Shields", "Improvised"
+        };
+
+        // Category selector
+        frame.ui.Combo("Category", &m_SelectedItemCategory, categories, 11);
+
+        // Weapon subcategory (only for weapons)
+        if (m_SelectedItemCategory == 0) {
+            frame.ui.Combo("Subcategory", &m_SelectedItemSubcategory, weaponSubcategories, 8);
+        }
+
+        frame.ui.Separator();
+
+        // Spawn parameters
+        frame.ui.SliderFloat("Distance Forward", &m_ItemSpawnDistanceForward, 50.0f, 300.0f);
+        frame.ui.SliderFloat("Distance Up", &m_ItemSpawnDistanceUp, 0.0f, 200.0f);
+        frame.ui.SliderFloat("Scale", &m_ItemSpawnScale, 0.1f, 5.0f);
+        frame.ui.Checkbox("Snap to Ground", &m_ItemSnapToGround);
+
+        frame.ui.Separator();
+
+        // For now, show placeholder since we need to implement the full item list
+        frame.ui.Text("Item spawner structure ready");
+        frame.ui.Text("Full item list implementation in progress...");
+        frame.ui.TextWrapped("Note: Will include 249 items total - 96 weapons, 144 armor pieces, 9 props");
     }
 
     // State
