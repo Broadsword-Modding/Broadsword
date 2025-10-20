@@ -25,7 +25,7 @@ public:
     void ToggleVisible() { m_Visible = !m_Visible; }
 
 private:
-    bool m_Visible = true;
+    bool m_Visible = false;
     char m_SearchBuffer[256] = {0};
     bool m_ShowFrameworkWindows = true;
     ConsoleWindow* m_ConsoleWindow = nullptr;

@@ -386,52 +386,42 @@ static HRESULT __stdcall hkPresent(IDXGISwapChain* pSwapChain, UINT syncInterval
         g_RenderBackend->NewFrame();
         ImGui::NewFrame();
 
-        // Render UI windows
-        try {
-            if (g_ModMenuUI)
-            {
+        // Always render notifications (even when UI hidden)
+        NotificationManager::Get().Render();
+
+        // Render framework UI only when ModMenuUI is visible
+        if (g_ModMenuUI && g_ModMenuUI->IsVisible())
+        {
+            try {
                 g_ModMenuUI->Render();
-            }
 
-            if (g_ConsoleWindow)
-            {
-                g_ConsoleWindow->Render();
-            }
+                if (g_ConsoleWindow)
+                {
+                    g_ConsoleWindow->Render();
+                }
 
-            if (g_SettingsWindow)
-            {
-                g_SettingsWindow->Render();
-            }
+                if (g_SettingsWindow)
+                {
+                    g_SettingsWindow->Render();
+                }
 
-            if (g_AboutWindow)
-            {
-                g_AboutWindow->Render();
-            }
+                if (g_AboutWindow)
+                {
+                    g_AboutWindow->Render();
+                }
 
-            // Render notifications
-            NotificationManager::Get().Render();
-        } catch (const std::exception& e) {
-            if (g_LoggerInitialized) {
-                LOG_ERROR("Exception rendering framework UI: {}", e.what());
-            }
-        } catch (...) {
-            if (g_LoggerInitialized) {
-                LOG_ERROR("Unknown exception rendering framework UI");
-            }
-        }
-
-        // Render mod UIs
-        try {
-            UIContext::Get().RenderModUIs();
-        } catch (const std::exception& e) {
-            if (g_LoggerInitialized) {
-                LOG_CRITICAL("Exception rendering mod UIs: {}", e.what());
-                Logger::Get().Flush();
-            }
-        } catch (...) {
-            if (g_LoggerInitialized) {
-                LOG_CRITICAL("Unknown exception rendering mod UIs");
-                Logger::Get().Flush();
+                // Render mod UIs
+                UIContext::Get().RenderModUIs();
+            } catch (const std::exception& e) {
+                if (g_LoggerInitialized) {
+                    LOG_ERROR("Exception rendering UI: {}", e.what());
+                    Logger::Get().Flush();
+                }
+            } catch (...) {
+                if (g_LoggerInitialized) {
+                    LOG_ERROR("Unknown exception rendering UI");
+                    Logger::Get().Flush();
+                }
             }
         }
 

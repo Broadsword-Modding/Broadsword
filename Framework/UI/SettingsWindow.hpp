@@ -16,8 +16,6 @@ public:
     void SetVisible(bool visible) { m_Visible = visible; }
     bool IsVisible() const { return m_Visible; }
 
-    void ToggleVisible() { m_Visible = !m_Visible; }
-
     void LoadFromConfig(const nlohmann::json& config);
     void SaveToConfig(nlohmann::json& config) const;
 

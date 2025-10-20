@@ -79,13 +79,23 @@ void ConsoleWindow::Render()
 
     // Build text buffer from filtered logs
     m_TextBuffer.clear();
+    m_TextBuffer.reserve(100000);
     const std::string searchStr = m_SearchBuffer;
 
-    // Query logs from Logger
-    auto logs = Services::Logger::Get().QueryLogs();
+    // Query logs from Logger (limit to last 500 for performance)
+    auto logs = Services::Logger::Get().QueryLogs(
+        std::nullopt,  // min_level
+        std::nullopt,  // mod_filter
+        std::nullopt,  // frame_start
+        std::nullopt,  // frame_end
+        500            // max_results
+    );
 
-    for (const auto& entry : logs)
+    // Reverse iteration - newest logs first (at top)
+    for (auto it = logs.rbegin(); it != logs.rend(); ++it)
     {
+        const auto& entry = *it;
+
         // Convert Services::LogLevel to Framework::LogLevel for filtering
         Framework::LogLevel level;
         switch (entry.level)
@@ -177,8 +187,8 @@ void ConsoleWindow::Render()
         m_TextBuffer += "\n";
     }
 
-    // Render as read-only multiline text input (allows text selection and copy)
     ImGuiInputTextFlags flags = ImGuiInputTextFlags_ReadOnly;
+
     ImGui::InputTextMultiline("##ConsoleText", m_TextBuffer.data(), m_TextBuffer.size() + 1,
                                ImVec2(-1, -1), flags);
 
@@ -270,11 +280,6 @@ void ConsoleWindow::LoadFromConfig(const nlohmann::json& config)
 
     const auto& consoleConfig = config["console"];
 
-    if (consoleConfig.contains("visible"))
-    {
-        m_Visible = consoleConfig["visible"].get<bool>();
-    }
-
     if (consoleConfig.contains("auto_scroll"))
     {
         m_AutoScroll = consoleConfig["auto_scroll"].get<bool>();
@@ -315,7 +320,6 @@ void ConsoleWindow::SaveToConfig(nlohmann::json& config) const
 {
     auto& consoleConfig = config["console"];
 
-    consoleConfig["visible"] = m_Visible;
     consoleConfig["auto_scroll"] = m_AutoScroll;
     consoleConfig["show_trace"] = m_ShowTrace;
     consoleConfig["show_debug"] = m_ShowDebug;

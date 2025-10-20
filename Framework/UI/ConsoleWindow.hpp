@@ -48,7 +48,7 @@ private:
 
     std::vector<ConsoleMessage> m_Messages;
     bool m_AutoScroll = true;
-    bool m_Visible = true;  // Open by default
+    bool m_Visible = true;
 
     bool m_ShowTrace = false;
     bool m_ShowDebug = true;  // Debug and above by default
