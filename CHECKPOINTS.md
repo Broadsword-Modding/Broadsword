@@ -603,19 +603,22 @@ class QueryEngine {
 ---
 
 ### Checkpoint 17: Main API Header
-**Status:** Not Started
-**Files to Create:**
+**Status:** Complete
+**Files Created:**
 - `ModAPI/Broadsword.hpp`
 
 **Implementation:**
 - Single include for all public APIs
-- Includes Mod.hpp, Frame.hpp, Result.hpp, Config.hpp, Hooks.hpp
+- Includes Mod.hpp, Frame.hpp, Result.hpp, Config.hpp, Hooks.hpp, Events.hpp
 - Clean namespace structure
+- SDK type re-exports for convenience
+- Comprehensive documentation with quick start guide
 
 **Success Criteria:**
 - Mods only need `#include <Broadsword.hpp>`
 - All APIs accessible
 - No conflicts
+- Builds cleanly
 
 ---
 
