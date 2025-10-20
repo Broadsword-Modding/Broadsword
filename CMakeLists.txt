@@ -120,6 +120,9 @@ set_target_properties(Broadsword PROPERTIES
 # Proxy DLL (dwmapi.dll hijacker)
 add_subdirectory(Proxy)
 
+# Mods
+add_subdirectory(Mods/Enhancer)
+
 # Output directories for different configurations
 foreach(CONFIG ${CMAKE_CONFIGURATION_TYPES})
     string(TOUPPER ${CONFIG} CONFIG_UPPER)

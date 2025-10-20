@@ -34,11 +34,16 @@
 // ========================================
 // Core Mod API
 // ========================================
-#include "Mod.hpp"           // IMod interface
+#include "Mod.hpp"           // Mod interface
 #include "Frame.hpp"         // Frame context
-#include "ModContext.hpp"    // ModContext for OnRegister
 #include "Result.hpp"        // Result<T, Error> monad
 #include "Error.hpp"         // Error enum
+
+// ModContext requires forward declared types
+#include "../Services/EventBus/EventBus.hpp"
+#include "../Services/Config/UniversalConfig.hpp"
+#include "../Services/Logging/Logger.hpp"
+#include "../Framework/Core/ModContext.hpp"
 
 // ========================================
 // Configuration System
@@ -49,11 +54,6 @@
 // ProcessEvent Hooks
 // ========================================
 #include "HookContext.hpp"   // Type-safe hook registration
-
-// ========================================
-// Events
-// ========================================
-#include "Events.hpp"        // OnFrameEvent and custom events
 
 // ========================================
 // Bring all Broadsword types into one namespace

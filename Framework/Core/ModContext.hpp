@@ -5,8 +5,14 @@ namespace Broadsword {
 // Forward declarations
 class EventBus;
 class UniversalConfig;
-class Logger;
 class HookContext;
+
+namespace Services {
+    class Logger;
+}
+
+// Bring Logger into Broadsword namespace for ModContext
+using Logger = Services::Logger;
 
 /**
  * Mod registration context passed to OnRegister()
