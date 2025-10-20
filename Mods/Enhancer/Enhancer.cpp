@@ -519,8 +519,86 @@ private:
         frame.ui.Text("NPC Spawner");
         frame.ui.Separator();
 
-        // Placeholder for NPC spawner
-        frame.ui.Text("NPC spawner coming soon...");
+        auto worldResult = frame.world.GetWorld();
+        if (!worldResult) {
+            frame.ui.TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "World not loaded");
+            return;
+        }
+        SDK::UWorld* world = worldResult.Value();
+
+        // NPC type selector
+        static const char* npcTypes[] = {
+            "Regular",
+            "No Brain",
+            "Boss 1",
+            "Boss 2",
+            "Boss 3",
+            "Boss 4",
+            "Boss 5",
+            "Boss 6",
+            "Boss 7",
+            "Boss 8",
+            "Boss 9 (Baron)"
+        };
+        static const char* npcClassPaths[] = {
+            "/Game/Character/Blueprints/Willie_BP.Willie_BP_C",
+            "/Game/Character/Blueprints/Willie_BP_NoBrain.Willie_BP_NoBrain_C",
+            "/Game/Character/Blueprints/Unique/Bosses/Willie_BP_Boss_1.Willie_BP_Boss_1_C",
+            "/Game/Character/Blueprints/Unique/Bosses/Willie_BP_Boss_2.Willie_BP_Boss_2_C",
+            "/Game/Character/Blueprints/Unique/Bosses/Willie_BP_Boss_3.Willie_BP_Boss_3_C",
+            "/Game/Character/Blueprints/Unique/Bosses/Willie_BP_Boss_4.Willie_BP_Boss_4_C",
+            "/Game/Character/Blueprints/Unique/Bosses/Willie_BP_Boss_5.Willie_BP_Boss_5_C",
+            "/Game/Character/Blueprints/Unique/Bosses/Willie_BP_Boss_6.Willie_BP_Boss_6_C",
+            "/Game/Character/Blueprints/Unique/Bosses/Willie_BP_Boss_7.Willie_BP_Boss_7_C",
+            "/Game/Character/Blueprints/Unique/Bosses/Willie_BP_Boss_8.Willie_BP_Boss_8_C",
+            "/Game/Character/Blueprints/Unique/Bosses/Willie_BP_Boss_9_BARON.Willie_BP_Boss_9_BARON_C"
+        };
+
+        frame.ui.Combo("NPC Type", &m_SelectedNPCType, npcTypes, 11);
+
+        frame.ui.Separator();
+
+        // Spawn parameters
+        frame.ui.SliderFloat("Distance Forward", &m_NPCSpawnDistanceForward, 100.0f, 500.0f);
+        frame.ui.SliderFloat("Distance Up", &m_NPCSpawnDistanceUp, 0.0f, 300.0f);
+        frame.ui.SliderFloat("Scale", &m_NPCSpawnScale, 0.1f, 4.0f);
+        frame.ui.Checkbox("Bodyguard", &m_NPCBodyguard);
+        frame.ui.Checkbox("Snap to Ground", &m_NPCSnapToGround);
+        frame.ui.SliderInt("Team", &m_NPCTeam, 0, 9);
+
+        frame.ui.Separator();
+
+        // Spawn button
+        if (frame.ui.Button("Spawn NPC")) {
+            if (!m_Player) {
+                frame.log.Warn("Cannot spawn NPC: player not found");
+                return;
+            }
+
+            SDK::FTransform spawnTransform = m_Player->GetTransform();
+            spawnTransform.Translation += m_Player->GetActorForwardVector() * m_NPCSpawnDistanceForward;
+            spawnTransform.Translation.Z += m_NPCSpawnDistanceUp;
+            spawnTransform.Scale3D = SDK::FVector(m_NPCSpawnScale, m_NPCSpawnScale, m_NPCSpawnScale);
+
+            const char* className = npcClassPaths[m_SelectedNPCType];
+
+            auto spawnResult = frame.world.SpawnActor(className, spawnTransform);
+            if (spawnResult) {
+                auto* npc = static_cast<SDK::AWillie_BP_C*>(spawnResult.Value());
+
+                if (m_NPCBodyguard) {
+                    constexpr int SPECIAL_TEAM_ID = 1337;
+                    m_Player->Team_Int = SPECIAL_TEAM_ID;
+                    npc->Team_Int = m_Player->Team_Int;
+                    frame.log.Info("Spawned {} as bodyguard (team {})", npcTypes[m_SelectedNPCType], SPECIAL_TEAM_ID);
+                } else {
+                    npc->Team_Int = m_NPCTeam;
+                    frame.log.Info("Spawned {} (team {})", npcTypes[m_SelectedNPCType], m_NPCTeam);
+                }
+            } else {
+                frame.log.Error("Failed to spawn {}: {}", npcTypes[m_SelectedNPCType], ToString(spawnResult.Error()));
+            }
+        }
     }
 
     void RenderItemSpawnerTab(Broadsword::Frame& frame) {
