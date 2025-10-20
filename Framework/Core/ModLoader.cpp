@@ -1,4 +1,5 @@
 #include "ModLoader.hpp"
+#include "../../Services/UI/UIContext.hpp"
 #include <iostream>
 
 namespace Broadsword {
@@ -141,7 +142,25 @@ void ModLoader::RegisterAllMods(ModContext& ctx) {
             try {
                 ModInfo info = loadedMod.modInstance->GetInfo();
                 std::cout << "[ModLoader] Registering mod: " << info.Name << "\n";
+
+                // Call OnRegister
                 loadedMod.modInstance->OnRegister(ctx);
+
+                // Register mod UI (placeholder - mods will render their own UI later)
+                Services::UIContext::Get().RegisterModUI(
+                    info.Name,
+                    info.Name,
+                    [&info]() {
+                        ImGui::Text("Mod: %s", info.Name.c_str());
+                        ImGui::Text("Version: %s", info.Version.c_str());
+                        ImGui::Text("Author: %s", info.Author.c_str());
+                        ImGui::Separator();
+                        ImGui::TextWrapped("%s", info.Description.c_str());
+                        ImGui::Spacing();
+                        ImGui::TextDisabled("(UI implementation pending)");
+                    }
+                );
+
                 std::cout << "[ModLoader] Successfully registered: " << info.Name << "\n";
             } catch (const std::exception& e) {
                 std::cerr << "[ModLoader] Exception in OnRegister: " << e.what() << "\n";

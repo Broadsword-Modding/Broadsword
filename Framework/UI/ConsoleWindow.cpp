@@ -169,18 +169,31 @@ void ConsoleWindow::Render()
         std::snprintf(timeBuffer, sizeof(timeBuffer), "%02d:%02d:%02d.%03d", localTime.tm_hour, localTime.tm_min,
                       localTime.tm_sec, static_cast<int>(ms.count()));
 
-        ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "[%s]", timeBuffer);
-        ImGui::SameLine();
-        ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "[F:%llu]", entry.frame_number);
-        ImGui::SameLine();
-        ImGui::TextColored(color, "%s", icon);
-        ImGui::SameLine();
+        // Build full log line as selectable text
+        std::string logLine;
+        logLine += "[" + std::string(timeBuffer) + "] ";
+        logLine += "[F:" + std::to_string(entry.frame_number) + "] ";
+        logLine += std::string(icon) + " ";
         if (!entry.context.mod_name.empty())
         {
-            ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.9f, 1.0f), "[%s]", entry.context.mod_name.c_str());
-            ImGui::SameLine();
+            logLine += "[" + entry.context.mod_name + "] ";
         }
-        ImGui::TextColored(color, "%s", entry.message.c_str());
+        logLine += entry.message;
+
+        // Use Selectable to allow copying text
+        ImGui::PushStyleColor(ImGuiCol_Text, color);
+        ImGui::Selectable(logLine.c_str(), false, ImGuiSelectableFlags_AllowItemOverlap);
+        ImGui::PopStyleColor();
+
+        // Right-click context menu for copying
+        if (ImGui::BeginPopupContextItem())
+        {
+            if (ImGui::MenuItem("Copy"))
+            {
+                ImGui::SetClipboardText(logLine.c_str());
+            }
+            ImGui::EndPopup();
+        }
     }
 
     // Auto-scroll to bottom
