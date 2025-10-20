@@ -215,14 +215,10 @@ public:
         return engine.CountActors<T>();
     }
 
-private:
-    /**
-     * Cached world pointer (updated each frame by framework)
-     * This is set by the framework main loop to avoid repeated lookups
-     */
-    mutable SDK::UWorld* m_CachedWorld = nullptr;
+    void UpdateWorldPointer();
 
-    friend class FrameworkCore; // Allows framework to update cache
+private:
+    mutable SDK::UWorld* m_CachedWorld = nullptr;
 };
 
 } // namespace Broadsword

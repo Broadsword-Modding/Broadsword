@@ -179,6 +179,15 @@ std::vector<LogEntry> Logger::QueryLogs(std::optional<LogLevel> min_level,
     return results;
 }
 
+void Logger::Flush()
+{
+    std::lock_guard<std::mutex> lock(m_FileMutex);
+    if (m_CurrentLogFile.is_open())
+    {
+        m_CurrentLogFile.flush();
+    }
+}
+
 void Logger::EnqueueLog(LogEntry entry)
 {
     {

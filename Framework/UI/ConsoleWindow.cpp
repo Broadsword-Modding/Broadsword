@@ -77,9 +77,8 @@ void ConsoleWindow::Render()
     }
     ImGui::EndChild();
 
-    // Message list
-    ImGui::BeginChild("ConsoleMessages", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
-
+    // Build text buffer from filtered logs
+    m_TextBuffer.clear();
     const std::string searchStr = m_SearchBuffer;
 
     // Query logs from Logger
@@ -155,10 +154,6 @@ void ConsoleWindow::Render()
             }
         }
 
-        // Render message with frame number
-        ImVec4 color = GetColorForLogLevel(level);
-        const char* icon = GetIconForLogLevel(level);
-
         // Format timestamp
         auto t = std::chrono::system_clock::to_time_t(entry.timestamp);
         auto ms =
@@ -169,40 +164,23 @@ void ConsoleWindow::Render()
         std::snprintf(timeBuffer, sizeof(timeBuffer), "%02d:%02d:%02d.%03d", localTime.tm_hour, localTime.tm_min,
                       localTime.tm_sec, static_cast<int>(ms.count()));
 
-        // Build full log line as selectable text
-        std::string logLine;
-        logLine += "[" + std::string(timeBuffer) + "] ";
-        logLine += "[F:" + std::to_string(entry.frame_number) + "] ";
-        logLine += std::string(icon) + " ";
+        // Build full log line
+        const char* icon = GetIconForLogLevel(level);
+        m_TextBuffer += "[" + std::string(timeBuffer) + "] ";
+        m_TextBuffer += "[F:" + std::to_string(entry.frame_number) + "] ";
+        m_TextBuffer += std::string(icon) + " ";
         if (!entry.context.mod_name.empty())
         {
-            logLine += "[" + entry.context.mod_name + "] ";
+            m_TextBuffer += "[" + entry.context.mod_name + "] ";
         }
-        logLine += entry.message;
-
-        // Use Selectable to allow copying text
-        ImGui::PushStyleColor(ImGuiCol_Text, color);
-        ImGui::Selectable(logLine.c_str(), false, ImGuiSelectableFlags_AllowItemOverlap);
-        ImGui::PopStyleColor();
-
-        // Right-click context menu for copying
-        if (ImGui::BeginPopupContextItem())
-        {
-            if (ImGui::MenuItem("Copy"))
-            {
-                ImGui::SetClipboardText(logLine.c_str());
-            }
-            ImGui::EndPopup();
-        }
+        m_TextBuffer += entry.message;
+        m_TextBuffer += "\n";
     }
 
-    // Auto-scroll to bottom
-    if (m_AutoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
-    {
-        ImGui::SetScrollHereY(1.0f);
-    }
-
-    ImGui::EndChild();
+    // Render as read-only multiline text input (allows text selection and copy)
+    ImGuiInputTextFlags flags = ImGuiInputTextFlags_ReadOnly;
+    ImGui::InputTextMultiline("##ConsoleText", m_TextBuffer.data(), m_TextBuffer.size() + 1,
+                               ImVec2(-1, -1), flags);
 
     ImGui::End();
 }

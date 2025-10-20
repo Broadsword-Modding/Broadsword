@@ -150,14 +150,22 @@ void ModLoader::RegisterAllMods(ModContext& ctx) {
                 Services::UIContext::Get().RegisterModUI(
                     info.Name,
                     info.Name,
-                    [&info]() {
-                        ImGui::Text("Mod: %s", info.Name.c_str());
-                        ImGui::Text("Version: %s", info.Version.c_str());
-                        ImGui::Text("Author: %s", info.Author.c_str());
-                        ImGui::Separator();
-                        ImGui::TextWrapped("%s", info.Description.c_str());
-                        ImGui::Spacing();
-                        ImGui::TextDisabled("(UI implementation pending)");
+                    [info]() {
+                        try {
+                            ImGui::Text("Mod: %s", info.Name.c_str());
+                            ImGui::Text("Version: %s", info.Version.c_str());
+                            ImGui::Text("Author: %s", info.Author.c_str());
+                            ImGui::Separator();
+                            ImGui::TextWrapped("%s", info.Description.c_str());
+                            ImGui::Spacing();
+                            ImGui::TextDisabled("(UI implementation pending)");
+                        } catch (const std::exception& e) {
+                            ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f),
+                                             "Error rendering mod UI: %s", e.what());
+                        } catch (...) {
+                            ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f),
+                                             "Unknown error rendering mod UI");
+                        }
                     }
                 );
 

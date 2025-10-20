@@ -178,6 +178,9 @@ public:
                                     std::optional<uint64_t> frame_end = {},
                                     size_t max_results = 1000);
 
+    // Force flush all pending logs to disk
+    void Flush();
+
 private:
     void EnqueueLog(LogEntry entry);
     void AsyncWriterThread();

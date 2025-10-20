@@ -48,6 +48,7 @@ static std::unique_ptr<EventBus> g_EventBus = nullptr;
 static std::unique_ptr<InputContext> g_InputContext = nullptr;
 static bool g_Initialized = false;
 static bool g_ShuttingDown = false;
+static bool g_ModsRegistered = false;
 static HWND g_Window = nullptr;
 static uint64_t g_FrameNumber = 0;
 static std::atomic<bool> g_LoggerInitialized = false;
@@ -75,13 +76,18 @@ static LRESULT CALLBACK hkWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPa
         }
     }
 
-    // Let ImGui handle input when UI is visible
-    if (g_ModMenuUI && g_ModMenuUI->IsVisible())
+    // Let ImGui handle input first
+    if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
     {
-        if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
-        {
-            return true;
-        }
+        return true;
+    }
+
+    // Check if ImGui wants to capture mouse/keyboard
+    ImGuiIO& io = ImGui::GetIO();
+    if (io.WantCaptureMouse || io.WantCaptureKeyboard)
+    {
+        // ImGui is using input, don't pass to game
+        return true;
     }
 
     // Pass to original WndProc
@@ -253,25 +259,7 @@ static HRESULT __stdcall hkPresent(IDXGISwapChain* pSwapChain, UINT syncInterval
             if (g_LoggerInitialized) LOG_INFO("Discovering mods in ./Mods directory...");
             size_t modsDiscovered = g_ModLoader->DiscoverMods("./Mods");
             if (g_LoggerInitialized) LOG_INFO("Discovered {} mods", modsDiscovered);
-
-            // Register mods now that all services are initialized
-            if (modsDiscovered > 0) {
-                if (g_LoggerInitialized) LOG_INFO("Registering mods...");
-
-                // Create stub UniversalConfig and HookContext for now
-                static UniversalConfig stubConfig;
-                static HookContext stubHooks;
-
-                ModContext modContext{
-                    .events = *g_EventBus,
-                    .config = stubConfig,
-                    .log = Logger::Get(),
-                    .hooks = stubHooks
-                };
-
-                g_ModLoader->RegisterAllMods(modContext);
-                if (g_LoggerInitialized) LOG_INFO("All mods registered successfully");
-            }
+            if (g_LoggerInitialized) LOG_INFO("Mod registration deferred until UWorld loads");
 
             g_Initialized = true;
         }
@@ -309,6 +297,51 @@ static HRESULT __stdcall hkPresent(IDXGISwapChain* pSwapChain, UINT syncInterval
         g_FrameNumber++;
         Logger::Get().SetCurrentFrame(g_FrameNumber);
 
+        // Update world pointer
+        if (g_WorldFacade) {
+            g_WorldFacade->UpdateWorldPointer();
+        }
+
+        // Deferred mod registration - wait for UWorld to load
+        if (!g_ModsRegistered && g_WorldFacade && g_WorldFacade->IsWorldLoaded()) {
+            try {
+                if (g_LoggerInitialized) {
+                    auto worldResult = g_WorldFacade->GetWorld();
+                    if (worldResult) {
+                        LOG_INFO("UWorld loaded at: 0x{:X}", reinterpret_cast<uintptr_t>(worldResult.Value()));
+                    }
+                    LOG_INFO("Registering mods...");
+                }
+
+                static UniversalConfig stubConfig;
+                static HookContext stubHooks;
+
+                ModContext modContext{
+                    .events = *g_EventBus,
+                    .config = stubConfig,
+                    .log = Logger::Get(),
+                    .hooks = stubHooks
+                };
+
+                g_ModLoader->RegisterAllMods(modContext);
+                g_ModsRegistered = true;
+
+                if (g_LoggerInitialized) LOG_INFO("All mods registered successfully");
+            } catch (const std::exception& e) {
+                if (g_LoggerInitialized) {
+                    LOG_CRITICAL("Exception during mod registration: {}", e.what());
+                    Logger::Get().Flush();
+                }
+                g_ModsRegistered = true;
+            } catch (...) {
+                if (g_LoggerInitialized) {
+                    LOG_CRITICAL("Unknown exception during mod registration");
+                    Logger::Get().Flush();
+                }
+                g_ModsRegistered = true;
+            }
+        }
+
         // Process game thread actions
         GameThreadExecutor::Get().ProcessQueue();
 
@@ -317,25 +350,35 @@ static HRESULT __stdcall hkPresent(IDXGISwapChain* pSwapChain, UINT syncInterval
 
         // Emit OnFrameEvent to mods
         if (g_EventBus && g_WorldFacade && g_InputContext) {
-            // Calculate delta time (simplified for now)
-            static auto lastFrameTime = std::chrono::high_resolution_clock::now();
-            auto currentTime = std::chrono::high_resolution_clock::now();
-            float deltaTime = std::chrono::duration<float>(currentTime - lastFrameTime).count();
-            lastFrameTime = currentTime;
+            try {
+                // Calculate delta time (simplified for now)
+                static auto lastFrameTime = std::chrono::high_resolution_clock::now();
+                auto currentTime = std::chrono::high_resolution_clock::now();
+                float deltaTime = std::chrono::duration<float>(currentTime - lastFrameTime).count();
+                lastFrameTime = currentTime;
 
-            // Create Frame context
-            Frame frame{
-                .world = *g_WorldFacade,
-                .ui = UIContext::Get(),
-                .input = *g_InputContext,
-                .log = Logger::Get(),
-                .deltaTime = deltaTime,
-                .frameNumber = g_FrameNumber
-            };
+                // Create Frame context
+                Frame frame{
+                    .world = *g_WorldFacade,
+                    .ui = UIContext::Get(),
+                    .input = *g_InputContext,
+                    .log = Logger::Get(),
+                    .deltaTime = deltaTime,
+                    .frameNumber = g_FrameNumber
+                };
 
-            // Create and emit OnFrameEvent
-            OnFrameEvent frameEvent{frame, deltaTime};
-            g_EventBus->Emit(frameEvent);
+                // Create and emit OnFrameEvent
+                OnFrameEvent frameEvent{frame, deltaTime};
+                g_EventBus->Emit(frameEvent);
+            } catch (const std::exception& e) {
+                if (g_LoggerInitialized) {
+                    LOG_ERROR("Exception in frame event: {}", e.what());
+                }
+            } catch (...) {
+                if (g_LoggerInitialized) {
+                    LOG_ERROR("Unknown exception in frame event");
+                }
+            }
         }
 
         // Start ImGui frame
@@ -344,31 +387,53 @@ static HRESULT __stdcall hkPresent(IDXGISwapChain* pSwapChain, UINT syncInterval
         ImGui::NewFrame();
 
         // Render UI windows
-        if (g_ModMenuUI)
-        {
-            g_ModMenuUI->Render();
-        }
+        try {
+            if (g_ModMenuUI)
+            {
+                g_ModMenuUI->Render();
+            }
 
-        if (g_ConsoleWindow)
-        {
-            g_ConsoleWindow->Render();
-        }
+            if (g_ConsoleWindow)
+            {
+                g_ConsoleWindow->Render();
+            }
 
-        if (g_SettingsWindow)
-        {
-            g_SettingsWindow->Render();
-        }
+            if (g_SettingsWindow)
+            {
+                g_SettingsWindow->Render();
+            }
 
-        if (g_AboutWindow)
-        {
-            g_AboutWindow->Render();
-        }
+            if (g_AboutWindow)
+            {
+                g_AboutWindow->Render();
+            }
 
-        // Render notifications
-        NotificationManager::Get().Render();
+            // Render notifications
+            NotificationManager::Get().Render();
+        } catch (const std::exception& e) {
+            if (g_LoggerInitialized) {
+                LOG_ERROR("Exception rendering framework UI: {}", e.what());
+            }
+        } catch (...) {
+            if (g_LoggerInitialized) {
+                LOG_ERROR("Unknown exception rendering framework UI");
+            }
+        }
 
         // Render mod UIs
-        UIContext::Get().RenderModUIs();
+        try {
+            UIContext::Get().RenderModUIs();
+        } catch (const std::exception& e) {
+            if (g_LoggerInitialized) {
+                LOG_CRITICAL("Exception rendering mod UIs: {}", e.what());
+                Logger::Get().Flush();
+            }
+        } catch (...) {
+            if (g_LoggerInitialized) {
+                LOG_CRITICAL("Unknown exception rendering mod UIs");
+                Logger::Get().Flush();
+            }
+        }
 
         // Render ImGui
         ImGui::Render();

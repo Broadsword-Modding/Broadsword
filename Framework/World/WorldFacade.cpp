@@ -79,4 +79,12 @@ bool WorldFacade::IsPlayerSpawned() const {
     return result.IsOk();
 }
 
+void WorldFacade::UpdateWorldPointer() {
+    SDK::UWorld* newWorld = SDK::UWorld::GetWorld();
+
+    if (newWorld != m_CachedWorld) {
+        m_CachedWorld = newWorld;
+    }
+}
+
 } // namespace Broadsword

@@ -58,6 +58,7 @@ private:
     bool m_ShowCritical = true;
 
     char m_SearchBuffer[256] = {0};
+    std::string m_TextBuffer;
 };
 
 } // namespace Broadsword::Framework
