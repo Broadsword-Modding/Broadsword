@@ -2,6 +2,10 @@
 
 #include "../../ModAPI/Result.hpp"
 #include "../../Engine/SDK/SDK.hpp"
+#include "ActorSpawner.hpp"
+#include "QueryEngine.hpp"
+#include <functional>
+#include <vector>
 
 namespace Broadsword {
 
@@ -71,6 +75,145 @@ public:
      * @return true if player exists and is accessible
      */
     bool IsPlayerSpawned() const;
+
+    // ========================================
+    // Spawning Operations
+    // ========================================
+
+    /**
+     * Spawn an actor at location
+     *
+     * @tparam T Actor type
+     * @param actorClass UClass of actor to spawn
+     * @param location World space location
+     * @param rotation World space rotation
+     * @return Result<T*> - Spawned actor or error
+     */
+    template<typename T>
+    Result<T*> Spawn(
+        SDK::UClass* actorClass,
+        const SDK::FVector& location,
+        const SDK::FRotator& rotation = {0.0f, 0.0f, 0.0f}
+    ) {
+        auto worldResult = GetWorld();
+        if (!worldResult) {
+            return worldResult.GetError();
+        }
+
+        ActorSpawner spawner(worldResult.Value());
+        return spawner.Spawn<T>(actorClass, location, rotation);
+    }
+
+    /**
+     * Spawn actor at transform
+     *
+     * @tparam T Actor type
+     * @param actorClass UClass of actor
+     * @param transform Complete transform
+     * @return Result<T*> - Spawned actor or error
+     */
+    template<typename T>
+    Result<T*> SpawnAtTransform(SDK::UClass* actorClass, const SDK::FTransform& transform) {
+        auto worldResult = GetWorld();
+        if (!worldResult) {
+            return worldResult.GetError();
+        }
+
+        ActorSpawner spawner(worldResult.Value());
+        return spawner.SpawnAtTransform<T>(actorClass, transform);
+    }
+
+    // ========================================
+    // Query Operations
+    // ========================================
+
+    /**
+     * Find first actor of type
+     *
+     * @tparam T Actor type
+     * @return Result<T*> - Found actor or error
+     */
+    template<typename T>
+    Result<T*> FindActor() {
+        auto worldResult = GetWorld();
+        if (!worldResult) {
+            return worldResult.GetError();
+        }
+
+        QueryEngine engine(worldResult.Value());
+        return engine.FindActor<T>();
+    }
+
+    /**
+     * Find all actors of type
+     *
+     * @tparam T Actor type
+     * @return Vector of actors (empty if none found)
+     */
+    template<typename T>
+    std::vector<T*> FindAllActors() {
+        auto worldResult = GetWorld();
+        if (!worldResult) {
+            return {};
+        }
+
+        QueryEngine engine(worldResult.Value());
+        return engine.FindAllActors<T>();
+    }
+
+    /**
+     * Find actors matching predicate
+     *
+     * @tparam T Actor type
+     * @param predicate Filter function
+     * @return Vector of matching actors
+     */
+    template<typename T>
+    std::vector<T*> FindActorsWhere(std::function<bool(T*)> predicate) {
+        auto worldResult = GetWorld();
+        if (!worldResult) {
+            return {};
+        }
+
+        QueryEngine engine(worldResult.Value());
+        return engine.FindActorsWhere<T>(predicate);
+    }
+
+    /**
+     * Find actors within radius
+     *
+     * @tparam T Actor type
+     * @param location Center point
+     * @param radius Search radius
+     * @return Vector of actors within radius
+     */
+    template<typename T>
+    std::vector<T*> FindActorsInRadius(const SDK::FVector& location, float radius) {
+        auto worldResult = GetWorld();
+        if (!worldResult) {
+            return {};
+        }
+
+        QueryEngine engine(worldResult.Value());
+        return engine.FindActorsInRadius<T>(location, radius);
+    }
+
+    /**
+     * Count actors of type
+     *
+     * @tparam T Actor type
+     * @return Number of actors found
+     */
+    template<typename T>
+    size_t CountActors() {
+        auto worldResult = GetWorld();
+        if (!worldResult) {
+            return 0;
+        }
+
+        QueryEngine engine(worldResult.Value());
+        return engine.CountActors<T>();
+    }
 
 private:
     /**

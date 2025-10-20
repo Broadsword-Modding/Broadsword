@@ -562,10 +562,9 @@ class HookContext {
 ---
 
 ### Checkpoint 15: World Facade - Part 2 (Spawning)
-**Status:** Not Started
-**Files to Create:**
-- `Framework/World/ActorSpawner.hpp`
-- `Framework/World/ActorSpawner.cpp`
+**Status:** Complete
+**Files Created:**
+- `Framework/World/ActorSpawner.hpp` (header-only template implementation)
 
 **Implementation:**
 ```cpp
@@ -583,10 +582,9 @@ class ActorSpawner {
 ---
 
 ### Checkpoint 16: World Facade - Part 3 (Queries)
-**Status:** Not Started
-**Files to Create:**
-- `Framework/World/QueryEngine.hpp`
-- `Framework/World/QueryEngine.cpp`
+**Status:** Complete
+**Files Created:**
+- `Framework/World/QueryEngine.hpp` (header-only template implementation)
 
 **Implementation:**
 ```cpp
