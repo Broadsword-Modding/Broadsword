@@ -27,7 +27,7 @@ void AboutWindow::Render()
 
     ImGui::SeparatorText("Broadsword Framework");
 
-    ImGui::Text("Version: 1.0.0");
+    ImGui::Text("Version: 2.1.0");
     ImGui::Text("Build: %s",
 #ifdef _DEBUG
                 "Debug"

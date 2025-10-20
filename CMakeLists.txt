@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.28)
-project(Broadsword VERSION 2.0.0 LANGUAGES CXX)
+project(Broadsword VERSION 2.1.0 LANGUAGES CXX)
 
 # C++23 for CMake compatibility, but we use /std:c++latest for C++26 features
 set(CMAKE_CXX_STANDARD 23)
