@@ -86,6 +86,7 @@ Write-Host "Game Path:     $GamePath" -ForegroundColor White
 Write-Host ""
 
 # Function to get file hash (first 8 characters for display)
+# Uses certutil for compatibility with Windows PowerShell
 function Get-ShortHash {
     param([string]$FilePath)
 
@@ -94,10 +95,44 @@ function Get-ShortHash {
     }
 
     try {
-        $hash = Get-FileHash -Path $FilePath -Algorithm SHA256
-        return $hash.Hash.Substring(0, 8)
+        # Use certutil which is available on all Windows versions
+        $certutilOutput = certutil -hashfile "$FilePath" SHA256 2>&1
+
+        if ($LASTEXITCODE -ne 0) {
+            # Fallback to file size + last write time as unique identifier
+            $fileInfo = Get-Item -Path $FilePath
+            $sizeHex = $fileInfo.Length.ToString("X8")
+            $timeHex = $fileInfo.LastWriteTimeUtc.Ticks.ToString("X8")
+            return "$sizeHex$timeHex".Substring(0, 8)
+        }
+
+        # certutil output format:
+        # SHA256 hash of file.dll:
+        # <hash>
+        # CertUtil: -hashfile command completed successfully.
+        # Extract the hash from line 2
+        $hashLine = ($certutilOutput | Select-Object -Skip 1 -First 1).Trim()
+        $hashLine = $hashLine -replace '\s+', ''
+
+        if ($hashLine.Length -ge 8) {
+            return $hashLine.Substring(0, 8).ToUpper()
+        } else {
+            # Fallback to file size + last write time
+            $fileInfo = Get-Item -Path $FilePath
+            $sizeHex = $fileInfo.Length.ToString("X8")
+            $timeHex = $fileInfo.LastWriteTimeUtc.Ticks.ToString("X8")
+            return "$sizeHex$timeHex".Substring(0, 8)
+        }
     } catch {
-        return "ERROR"
+        # Final fallback: use file size + last write time
+        try {
+            $fileInfo = Get-Item -Path $FilePath
+            $sizeHex = $fileInfo.Length.ToString("X8")
+            $timeHex = $fileInfo.LastWriteTimeUtc.Ticks.ToString("X8")
+            return "$sizeHex$timeHex".Substring(0, 8)
+        } catch {
+            return "ERROR"
+        }
     }
 }
 
